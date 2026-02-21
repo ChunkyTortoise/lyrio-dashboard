@@ -1,5 +1,6 @@
 """Cost & ROI Tracker page."""
 from __future__ import annotations
+from datetime import datetime
 import pandas as pd
 import streamlit as st
 from components import render_page_title, render_stat
@@ -20,11 +21,12 @@ def render(provider) -> None:
 
     cb = provider.get_cost_breakdown()
     roi = cb.roi
+    period_label = datetime.strptime(cb.period_label, "%Y-%m").strftime("%b %Y")
 
     # 4 metric cards
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        render_stat(f"${cb.total_cost_usd:.2f}", "Total LLM spend")
+        render_stat(f"${cb.total_cost_usd:.2f}", f"Total LLM spend · {period_label}")
     with c2:
         render_stat(f"${roi.cost_per_lead:.2f}", "Cost per lead")
     with c3:

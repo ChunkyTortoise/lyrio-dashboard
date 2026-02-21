@@ -16,7 +16,7 @@ st.set_page_config(
 
 from theme import inject_css
 from components import render_sidebar_brand, render_sidebar_context, render_sidebar_status
-from backend.data_provider import create_data_provider
+from backend.data_provider import DataProvider, create_data_provider
 
 # Inject theme CSS
 inject_css()
@@ -35,7 +35,11 @@ for _k, _v in _DEFAULTS.items():
         st.session_state[_k] = _v
 
 # Create data provider (demo mode — no live API calls)
-provider = create_data_provider(mode="demo")
+@st.cache_resource
+def _get_provider() -> DataProvider:
+    return create_data_provider(mode="demo")
+
+provider = _get_provider()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
