@@ -38,6 +38,8 @@ class DataProvider(Protocol):
 
     def get_handoff_events(self, limit: int = 10) -> list[HandoffEvent]: ...
 
+    def get_all_leads(self) -> list[LeadDetail]: ...
+
 
 def create_data_provider(mode: str = "demo") -> DataProvider:
     """Factory: returns DemoDataProvider or LiveDataProvider."""

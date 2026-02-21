@@ -4,8 +4,19 @@ import streamlit as st
 from components import render_page_title, render_activity_item
 
 
+def _save_activity_filters() -> None:
+    st.session_state["activity_filters"] = {
+        "event_types": st.session_state.get("feed_event_types", ["All"]),
+        "bot": st.session_state.get("feed_bot", "All"),
+        "temperature": st.session_state.get("feed_temperature", "All"),
+    }
+
+
 def render(provider) -> None:
     render_page_title("Lead activity feed", "Real-time bot interactions and qualification events")
+
+    # Restore persisted filter values
+    _saved = st.session_state.get("activity_filters", {})
 
     # Filter bar
     col1, col2, col3 = st.columns(3)
@@ -14,20 +25,25 @@ def render(provider) -> None:
             "Event type",
             options=["All", "message_sent", "message_received", "temperature_change",
                      "handoff", "workflow_triggered", "tag_applied"],
-            default=["All"],
+            default=_saved.get("event_types", ["All"]),
             key="feed_event_types",
+            on_change=_save_activity_filters,
         )
     with col2:
         bot_filter = st.selectbox(
             "Bot",
             options=["All", "Seller Bot", "Buyer Bot", "Lead Bot"],
+            index=["All", "Seller Bot", "Buyer Bot", "Lead Bot"].index(_saved.get("bot", "All")),
             key="feed_bot",
+            on_change=_save_activity_filters,
         )
     with col3:
         temp_filter = st.selectbox(
             "Temperature",
             options=["All", "Hot", "Warm", "Cold"],
+            index=["All", "Hot", "Warm", "Cold"].index(_saved.get("temperature", "All")),
             key="feed_temperature",
+            on_change=_save_activity_filters,
         )
 
     # Fetch enough to have buffer after filtering

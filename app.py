@@ -48,7 +48,7 @@ with st.sidebar:
 
     page = st.radio(
         "Navigate",
-        options=["Chat", "Bots", "Costs", "Activity"],
+        options=["Chat", "Bots", "Costs", "Activity", "Leads"],
         key="nav_page",
         label_visibility="collapsed",
     )
@@ -75,4 +75,7 @@ elif page == "Costs":
     render(provider)
 elif page == "Activity":
     from pages.lead_activity_feed import render
+    render(provider)
+elif page == "Leads":
+    from pages.lead_browser import render
     render(provider)

@@ -388,3 +388,22 @@ class DemoDataProvider:
 
     def get_handoff_events(self, limit: int = 10) -> list[HandoffEvent]:
         return self._handoffs[:limit]
+
+    def get_all_leads(self) -> list[LeadDetail]:
+        return [
+            LeadDetail(
+                name=l["name"],
+                phone_masked=l["phone_masked"],
+                temperature=l["temperature"],
+                frs_score=l["frs_score"],
+                pcs_score=l["pcs_score"],
+                qualification_stage=l["qualification_stage"],
+                property_address=l["property_address"],
+                city=l["city"],
+                timeline=l["timeline"],
+                bot_assigned=l["bot_assigned"],
+                conversation_count=l["conversation_count"],
+                last_contact=l["last_contact"],
+            )
+            for l in self._leads
+        ]
