@@ -49,6 +49,12 @@ def render(provider) -> None:
 
     messages = st.session_state.chat_messages
 
+    # Clear chat button (only shown when history exists)
+    if messages:
+        if st.button("Clear chat", key="clear_chat"):
+            st.session_state.chat_messages = []
+            st.rerun()
+
     # Empty state — suggestion chips
     if not messages:
         st.markdown(
