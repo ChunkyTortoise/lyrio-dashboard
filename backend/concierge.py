@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Callable
 
 import anthropic
 
@@ -73,13 +73,20 @@ class ConciergeChat:
         self._provider = data_provider
         self._client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
 
-    def chat(self, user_message: str, history: list[dict]) -> str:
+    def chat(
+        self,
+        user_message: str,
+        history: list[dict],
+        on_tool_call: Callable[[str], None] | None = None,
+    ) -> str:
         """Send a user message and return assistant text response.
 
         Args:
             user_message: The user's question or request.
             history: Prior conversation as list of {"role": str, "content": str}.
                      Should NOT include the current user_message.
+            on_tool_call: Optional callback invoked with the tool name each time a
+                          tool call is about to execute. Use for UI progress indicators.
 
         Returns:
             Assistant text response.
@@ -103,6 +110,8 @@ class ConciergeChat:
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
+                    if on_tool_call is not None:
+                        on_tool_call(block.name)
                     result = self._execute_tool(block.name, block.input)
                     tool_results.append({
                         "type": "tool_result",

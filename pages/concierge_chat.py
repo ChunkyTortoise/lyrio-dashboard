@@ -96,14 +96,23 @@ def render(provider) -> None:
 
         # Get response
         with st.chat_message("assistant"):
+            tool_indicator = st.empty()
+
+            def _on_tool_call(tool_name: str) -> None:
+                tool_indicator.markdown(
+                    '<p style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;margin:0;">🔍 Checking lead data...</p>',
+                    unsafe_allow_html=True,
+                )
+
             with st.spinner("Thinking..."):
                 try:
                     concierge = ConciergeChat(provider, api_key=api_key)
                     # Pass history excluding the current user message
                     history = messages[:-1]
-                    response = concierge.chat(prompt, history=history)
+                    response = concierge.chat(prompt, history=history, on_tool_call=_on_tool_call)
                 except Exception as exc:
                     response = f"Something went wrong: {exc}"
+            tool_indicator.empty()
             st.write(response)
 
         messages.append({"role": "assistant", "content": response})

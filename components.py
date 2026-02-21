@@ -148,13 +148,17 @@ def render_sidebar_context(page: str, data) -> None:
     if page == "Bots":
         statuses = data.get_bot_statuses()
         online = sum(1 for s in statuses if s.is_online)
-        text = f"{online} bots active \u2014 last sync 2m ago"
+        qualified_today = sum(s.leads_qualified_today for s in statuses)
+        text = f"{online} bots active \u2014 {qualified_today} leads qualified today"
     elif page == "Costs":
         cb = data.get_cost_breakdown()
         text = f"${cb.total_cost_usd:.2f} spent this month"
     elif page == "Activity":
         summary = data.get_lead_summary()
         text = f"{summary.total_count} leads tracked \u2014 {summary.hot_count} hot"
+    elif page == "Leads":
+        summary = data.get_lead_summary()
+        text = f"{summary.total_count} leads \u2014 {summary.hot_count} hot · {summary.warm_count} warm"
     else:  # Chat
         summary = data.get_lead_summary()
         text = f"{summary.hot_count} hot leads need attention"

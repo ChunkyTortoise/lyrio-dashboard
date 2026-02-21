@@ -45,3 +45,6 @@ class LiveDataProvider:
 
     def get_handoff_events(self, limit: int = 10) -> list[HandoffEvent]:
         raise NotImplementedError(_MSG)
+
+    def get_all_leads(self) -> list[LeadDetail]:
+        raise NotImplementedError(_MSG)
