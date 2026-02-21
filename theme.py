@@ -9,6 +9,9 @@ def inject_css() -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
+        /* Hide Streamlit's automatic multipage nav (we use our own radio) */
+        [data-testid="stSidebarNav"] { display: none !important; }
+
         :root {
             --bg: #05070A;
             --card-bg: rgba(13, 17, 23, 0.85);
