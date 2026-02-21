@@ -17,12 +17,12 @@ _EVENT_COLORS = {
 
 
 def render_page_title(title: str, subtitle: str = "") -> None:
+    subtitle_html = (
+        f'<p style="font-family:Inter,sans-serif;font-size:0.9rem;color:#8B949E;margin:0.25rem 0 0;">{subtitle}</p>'
+        if subtitle else ""
+    )
     st.markdown(
-        f"""<div style="margin-bottom:1.5rem;">
-        <h1 style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.5rem;
-            color:#FFFFFF;margin:0;letter-spacing:-0.02em;">{title}</h1>
-        {"" if not subtitle else f'<p style="font-family:Inter,sans-serif;font-size:0.9rem;color:#8B949E;margin:0.25rem 0 0;">{subtitle}</p>'}
-        </div>""",
+        f'<div style="margin-bottom:1.5rem;"><h1 style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:1.5rem;color:#FFFFFF;margin:0;letter-spacing:-0.02em;">{title}</h1>{subtitle_html}</div>',
         unsafe_allow_html=True,
     )
 
@@ -33,11 +33,7 @@ def render_stat(value: str, label: str, delta: str = "") -> None:
         color = "#10b981" if not delta.startswith("-") else "#ef4444"
         delta_html = f'<div style="font-family:Inter,sans-serif;font-size:0.75rem;color:{color};margin-top:0.2rem;">{delta}</div>'
     st.markdown(
-        f"""<div class="lyrio-card" style="text-align:center;">
-        <div class="lyrio-stat-value">{value}</div>
-        <div class="lyrio-stat-label">{label}</div>
-        {delta_html}
-        </div>""",
+        f'<div class="lyrio-card" style="text-align:center;"><div class="lyrio-stat-value">{value}</div><div class="lyrio-stat-label">{label}</div>{delta_html}</div>',
         unsafe_allow_html=True,
     )
 
