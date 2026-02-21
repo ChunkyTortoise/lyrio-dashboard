@@ -50,6 +50,12 @@ class DemoDataProvider:
         self._activity = self._generate_activity()
         self._conversations = self._generate_conversations()
         self._handoffs = self._generate_handoffs()
+        # Pre-compute once so get_bot_statuses() returns stable values across calls
+        self._bot_response_times: dict[str, float] = {
+            "seller": round(self._rng.uniform(2.0, 3.0), 1),
+            "buyer": round(self._rng.uniform(3.0, 4.0), 1),
+            "lead": round(self._rng.uniform(2.0, 3.0), 1),
+        }
 
     # ------------------------------------------------------------------
     # Lead generation
@@ -244,12 +250,12 @@ class DemoDataProvider:
 
     def get_bot_statuses(self) -> list[BotStatus]:
         configs = [
-            ("seller", "Seller Bot", 2.0, 3.0, 0.88, 7, 2, 2),
-            ("buyer", "Buyer Bot", 3.0, 4.0, 0.82, 4, 1, 1),
-            ("lead", "Lead Qualifier Bot", 2.0, 3.0, 0.91, 9, 3, 3),
+            ("seller", "Seller Bot", 0.88, 7, 2, 2),
+            ("buyer", "Buyer Bot", 0.82, 4, 1, 1),
+            ("lead", "Lead Qualifier Bot", 0.91, 9, 3, 3),
         ]
         statuses: list[BotStatus] = []
-        for bot_id, name, rt_lo, rt_hi, success, conv_day, qualified_today, active in configs:
+        for bot_id, name, success, conv_day, qualified_today, active in configs:
             bot_leads = [l for l in self._leads if l["bot_assigned"] == bot_id]
             total_convs = sum(l["conversation_count"] for l in bot_leads)
             hot = sum(1 for l in bot_leads if l["temperature"] == "hot")
@@ -262,7 +268,7 @@ class DemoDataProvider:
                 is_online=True,
                 conversations_today=conv_day,
                 conversations_total=total_convs,
-                avg_response_time_sec=round(self._rng.uniform(rt_lo, rt_hi), 1),
+                avg_response_time_sec=self._bot_response_times[bot_id],
                 success_rate=success,
                 leads_qualified_today=qualified_today,
                 active_conversations=active,
