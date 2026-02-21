@@ -25,14 +25,16 @@ def render(provider) -> None:
     tab_overview, tab_convs, tab_handoffs = st.tabs(["Overview", "Conversations", "Handoffs"])
 
     with tab_overview:
-        # Build dataframe for area chart
+        # Build dataframe for area chart — proportions from actual bot data
         trends = provider.get_daily_trends(14)
+        total_all = sum(s.conversations_total for s in statuses) or 1
+        bot_pcts = {s.bot_id: s.conversations_total / total_all for s in statuses}
         df = pd.DataFrame([
             {
                 "date": t.date,
-                "seller": max(0, round(t.conversations * 0.35)),
-                "buyer": max(0, round(t.conversations * 0.22)),
-                "lead": max(0, round(t.conversations * 0.43)),
+                "seller": max(0, round(t.conversations * bot_pcts.get("seller", 0.35))),
+                "buyer": max(0, round(t.conversations * bot_pcts.get("buyer", 0.22))),
+                "lead": max(0, round(t.conversations * bot_pcts.get("lead", 0.43))),
             }
             for t in trends
         ])

@@ -148,7 +148,9 @@ class DemoDataProvider:
                 if etype == "temperature_change":
                     metadata = {"temperature": lead["temperature"]}
                 elif etype in ("message_sent", "message_received"):
-                    metadata = {"bot": lead["bot_assigned"]}
+                    metadata = {"bot": lead["bot_assigned"], "lead_temperature": lead["temperature"]}
+                elif etype in ("workflow_triggered", "tag_applied", "handoff"):
+                    metadata = {"lead_temperature": lead["temperature"]}
 
                 events.append(ActivityEvent(
                     event_id=str(uuid.UUID(int=self._rng.getrandbits(128))),
@@ -171,7 +173,7 @@ class DemoDataProvider:
                 bot_id=lead["bot_assigned"],
                 description=f"Follow-up message to {lead['name']}",
                 timestamp=_NOW - timedelta(minutes=minutes_ago),
-                metadata={"bot": lead["bot_assigned"]},
+                metadata={"bot": lead["bot_assigned"], "lead_temperature": lead["temperature"]},
             ))
 
         events.sort(key=lambda e: e.timestamp, reverse=True)
