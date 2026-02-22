@@ -34,9 +34,18 @@ for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Create data provider (demo mode — no live API calls)
+# Create data provider — live if GHL creds present, else demo
 @st.cache_resource
 def _get_provider() -> DataProvider:
+    try:
+        ghl_key = st.secrets.get("ghl", {}).get("api_key", "")
+        location_id = st.secrets.get("ghl", {}).get("location_id", "")
+    except Exception:
+        ghl_key = location_id = ""
+    if ghl_key and location_id:
+        from backend.ghl_client import GHLClient
+        from backend.live_data import LiveDataProvider
+        return LiveDataProvider(GHLClient(ghl_key, location_id))
     return create_data_provider(mode="demo")
 
 provider = _get_provider()
@@ -58,8 +67,10 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     render_sidebar_status()
     st.markdown("---")
+    from backend.live_data import LiveDataProvider
+    _mode_label = "Live — Jorge's GHL" if isinstance(provider, LiveDataProvider) else "Demo mode — data is illustrative"
     st.markdown(
-        '<p style="font-family:Inter,sans-serif;font-size:0.75rem;color:#8B949E;margin:0;">Demo mode — data is illustrative</p>',
+        f'<p style="font-family:Inter,sans-serif;font-size:0.75rem;color:#8B949E;margin:0;">{_mode_label}</p>',
         unsafe_allow_html=True,
     )
 
