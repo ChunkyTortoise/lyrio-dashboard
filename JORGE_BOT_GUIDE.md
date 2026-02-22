@@ -143,6 +143,80 @@ _CACHE_COST_PER_MTOK = 0.30   # $ per million cache read tokens
 
 ---
 
+## How a Lead Moves Through the System
+
+```
+New SMS inbound
+    └── Lead Bot fires (GHL Workflow)
+          ├── Asks qualifying questions
+          ├── Determines: seller or buyer?
+          └── Routes to correct bot + applies routing tag
+                ├── Seller Bot
+                │     ├── Asks seller questions (timeline, motivation, mortgage)
+                │     ├── Computes FRS score → writes to custom field
+                │     └── Applies temperature tag (hot-seller / warm-seller / cold-seller)
+                └── Buyer Bot
+                      ├── Asks buyer questions (budget, pre-approval, timeline)
+                      ├── Computes PCS score → writes to custom field
+                      └── Applies temperature tag (hot-buyer / warm-buyer / cold-buyer)
+
+Dashboard reads tags + custom fields every page load
+    └── Hot leads → "3 hot leads need attention" in sidebar
+```
+
+**Why a lead might show as cold:**
+- Bot hasn't finished qualifying them yet (still in workflow)
+- Their answers scored below 40 (FRS/PCS)
+- Tags weren't applied correctly — check the contact in GHL and look at their tags
+
+---
+
+## Understanding FRS and PCS Scores
+
+**FRS — Financial Readiness Score** (Seller Bot, 0–100)
+
+Measures how ready a homeowner is to sell. Factors: equity position, mortgage payoff timeline, urgency of move, and financial motivation. Higher = more ready to transact.
+
+| Score | Temperature | What It Means |
+|-------|-------------|---------------|
+| 80–100 | 🔴 Hot | Strong candidate — follow up fast |
+| 40–79 | 🟡 Warm | Interested but not urgent — nurture |
+| 0–39 | 🔵 Cold | Too early or not motivated — long-term nurture |
+
+**PCS — Property Criteria Score** (Buyer Bot, 0–100)
+
+Measures how qualified and specific a buyer is. Factors: pre-approval status, budget clarity, neighborhood preference, timeline. Higher = more likely to transact.
+
+Same 80/40 thresholds apply.
+
+Both scores are stored as GHL custom fields and visible on each contact record. They're also visible in the dashboard Leads page and surfaced by the AI concierge when you ask about a specific person.
+
+---
+
+## Troubleshooting
+
+**Concierge says "Something went wrong" or won't respond**
+- The Anthropic API key is missing or invalid
+- Go to Streamlit Cloud → Settings → Secrets → confirm `[anthropic] api_key` is set and starts with `sk-ant-`
+- If the key expired, generate a new one at console.anthropic.com
+
+**Dashboard shows 0 hot leads (all data blank)**
+- App is in Live mode but GHL tags don't match expected format
+- Fix: Streamlit Cloud → Settings → Secrets → set `mode = "demo"` → Reboot app
+- Or check that your GHL contacts have the correct tags (see Tags section above)
+
+**Data looks stale / changes in GHL aren't showing**
+- The dashboard caches GHL data for the duration of the server session
+- Fix: Streamlit Cloud → your app → ⋮ menu → **Reboot app**
+- Data refreshes on next page load after reboot
+
+**App is completely down ("This app has gone to sleep")**
+- Streamlit Cloud free tier sleeps after inactivity
+- Just open the URL — it will wake up in ~30 seconds
+- Click "Yes, get this app back up!" if prompted
+
+---
+
 ## Switching Dashboard from Demo to Live Data
 
 The dashboard currently runs in **demo mode** (illustrative data for presentations).
