@@ -245,22 +245,24 @@
 <p>GHL → Automation → Workflows → create a workflow triggered by the hot-seller or hot-lead tag being applied → add your follow-up SMS steps. This way the moment a lead hits 80 on their score, GHL fires your follow-up sequence automatically without you needing to watch the dashboard.</p>
 
 
-<h2>What the Dashboard and Concierge Cannot Do</h2>
+<h2>What the Dashboard and Concierge Can Do</h2>
 
-<p>The Lyrio dashboard is read-only. It observes your GHL data but never writes to it. The concierge answers questions — it does not take actions.</p>
+<p>The Lyrio dashboard reads your GHL data. The concierge can also take actions — send SMS, enroll in workflows, change temperature, or update scores — but always asks for confirmation before executing any write.</p>
 
 <table>
-  <thead><tr><th>Action</th><th>Can Lyrio Do It?</th><th>Where to Do It Instead</th></tr></thead>
+  <thead><tr><th>Action</th><th>Can Lyrio Do It?</th><th>How</th></tr></thead>
   <tbody>
     <tr><td>Show lead temperatures and scores</td><td>Yes</td><td>Dashboard → Leads</td></tr>
     <tr><td>Tell you which leads to prioritize</td><td>Yes</td><td>Dashboard → Chat (Concierge)</td></tr>
-    <tr><td>Send an SMS to a lead</td><td>No</td><td>GHL → Conversations</td></tr>
-    <tr><td>Follow up with someone automatically</td><td>No</td><td>GHL → Automation → Workflows</td></tr>
-    <tr><td>Change a lead's tag or score</td><td>No</td><td>GHL → Contacts → select lead</td></tr>
-    <tr><td>Trigger a workflow</td><td>No</td><td>GHL → Contacts → manual enroll</td></tr>
+    <tr><td>Send an SMS to a lead</td><td><strong>Yes (with confirmation)</strong></td><td>Ask the Concierge — it proposes the message first</td></tr>
+    <tr><td>Enroll a lead in a workflow</td><td><strong>Yes (with confirmation)</strong></td><td>Ask the Concierge — it confirms the workflow name first</td></tr>
+    <tr><td>Change a lead's temperature tag</td><td><strong>Yes (with confirmation)</strong></td><td>Ask the Concierge — it confirms hot/warm/cold first</td></tr>
+    <tr><td>Update a lead's FRS score</td><td><strong>Yes (with confirmation)</strong></td><td>Ask the Concierge — it confirms the new score first</td></tr>
     <tr><td>Book an appointment</td><td>No</td><td>GHL → Calendar or Conversations</td></tr>
   </tbody>
 </table>
+
+<p><strong>Confirmation flow:</strong> The concierge will always propose the action and ask "Want me to go ahead?" before writing anything to GHL. Just say yes to confirm or no to cancel.</p>
 
 
 <h2>How a Lead Moves Through the System</h2>

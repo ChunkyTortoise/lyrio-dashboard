@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.ghl_client import GHLClient
 from backend.models import (
+    ActionResult,
     ActivityEvent,
     BotCostData,
     BotStatus,
@@ -34,6 +35,24 @@ _AVG_COMMISSION = 18_000.0
 # Temperature tag sets (GHL applies these as-is)
 _HOT_TAGS = {"hot-seller", "hot-lead", "hot"}
 _WARM_TAGS = {"warm-seller", "warm-lead", "warm"}
+
+# All temperature tags that must be cleared before writing a new one
+_ALL_TEMP_TAGS = [
+    "hot-seller", "warm-seller", "cold-seller",
+    "hot-lead", "warm-lead", "cold-lead",
+    "hot-buyer", "warm-buyer", "cold-buyer",
+    "hot", "warm", "cold",
+]
+
+# Workflow display name → GHL workflow ID (placeholder IDs until Jorge provides real ones)
+_WORKFLOWS: dict[str, str] = {
+    "hot seller workflow": "wf-hot-seller-placeholder",
+    "warm seller workflow": "wf-warm-seller-placeholder",
+    "hot buyer workflow": "wf-hot-buyer-placeholder",
+    "notify agent workflow": "wf-notify-agent-placeholder",
+    "lead nurture sequence": "wf-lead-nurture-placeholder",
+    "appointment confirmation": "wf-appt-confirm-placeholder",
+}
 
 # Tags that indicate bot assignment
 _SELLER_TAGS = {"seller-qualified", "hot-seller", "warm-seller", "cold-seller"}
@@ -436,3 +455,183 @@ class LiveDataProvider:
                 last_contact=_parse_dt(c.get("dateUpdated")),
             ))
         return leads
+
+    # ------------------------------------------------------------------
+    # Write helpers
+    # ------------------------------------------------------------------
+
+    def _resolve_contact(self, lead_name: str) -> tuple[str, str] | None:
+        """Return (contact_id, full_name) for the first contact matching lead_name, or None."""
+        needle = lead_name.lower()
+        contacts = self._get_contacts()
+        match = next(
+            (c for c in contacts if needle in _full_name(c).lower()),
+            None,
+        )
+        if match is None:
+            return None
+        return match.get("id", ""), _full_name(match)
+
+    def _invalidate_contacts_cache(self) -> None:
+        self._contacts = None
+
+    # ------------------------------------------------------------------
+    # Write actions
+    # ------------------------------------------------------------------
+
+    def send_sms(self, lead_name: str, message: str) -> ActionResult:
+        resolved = self._resolve_contact(lead_name)
+        if resolved is None:
+            return ActionResult(
+                success=False,
+                action="sms_sent",
+                contact_name=lead_name,
+                detail=f"No contact found matching '{lead_name}'",
+            )
+        contact_id, name = resolved
+        try:
+            self._client.send_sms(contact_id, message)
+            return ActionResult(
+                success=True,
+                action="sms_sent",
+                contact_name=name,
+                detail=f"SMS sent to {name}",
+            )
+        except Exception as exc:
+            return ActionResult(
+                success=False,
+                action="sms_sent",
+                contact_name=name,
+                detail=f"Failed to send SMS to {name}: {exc}",
+            )
+
+    def enroll_in_workflow(self, lead_name: str, workflow_name: str) -> ActionResult:
+        resolved = self._resolve_contact(lead_name)
+        if resolved is None:
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name=lead_name,
+                detail=f"No contact found matching '{lead_name}'",
+            )
+        contact_id, name = resolved
+        workflow_id = _WORKFLOWS.get(workflow_name.lower())
+        if workflow_id is None:
+            available = ", ".join(_WORKFLOWS.keys())
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name=name,
+                detail=f"Unknown workflow '{workflow_name}'. Available: {available}",
+            )
+        try:
+            self._client.enroll_in_workflow(contact_id, workflow_id)
+            return ActionResult(
+                success=True,
+                action="workflow_enrolled",
+                contact_name=name,
+                detail=f"{name} enrolled in '{workflow_name}'",
+            )
+        except Exception as exc:
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name=name,
+                detail=f"Failed to enroll {name}: {exc}",
+            )
+
+    def update_lead_temperature(self, lead_name: str, new_temperature: str) -> ActionResult:
+        resolved = self._resolve_contact(lead_name)
+        if resolved is None:
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name=lead_name,
+                detail=f"No contact found matching '{lead_name}'",
+            )
+        contact_id, name = resolved
+        temp = new_temperature.lower().strip()
+        if temp not in {"hot", "warm", "cold"}:
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name=name,
+                detail=f"Invalid temperature '{new_temperature}'. Must be hot, warm, or cold.",
+            )
+        # Determine bot type to pick the right tag prefix
+        contacts = self._get_contacts()
+        contact = next((c for c in contacts if c.get("id") == contact_id), {})
+        bot = _bot_type(contact)
+        new_tag = f"{temp}-{bot}"
+        try:
+            self._client.remove_tags(contact_id, _ALL_TEMP_TAGS)
+            self._client.add_tags(contact_id, [new_tag])
+            self._invalidate_contacts_cache()
+            return ActionResult(
+                success=True,
+                action="tags_updated",
+                contact_name=name,
+                detail=f"Updated {name} temperature to {temp} (tag: {new_tag})",
+            )
+        except Exception as exc:
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name=name,
+                detail=f"Failed to update temperature for {name}: {exc}",
+            )
+
+    def update_lead_score(
+        self,
+        lead_name: str,
+        frs_score: float | None = None,
+        pcs_score: float | None = None,
+    ) -> ActionResult:
+        resolved = self._resolve_contact(lead_name)
+        if resolved is None:
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name=lead_name,
+                detail=f"No contact found matching '{lead_name}'",
+            )
+        contact_id, name = resolved
+        for label, score in (("frs_score", frs_score), ("pcs_score", pcs_score)):
+            if score is not None and not (0 <= score <= 100):
+                return ActionResult(
+                    success=False,
+                    action="score_updated",
+                    contact_name=name,
+                    detail=f"{label} must be between 0 and 100, got {score}",
+                )
+        if frs_score is None and pcs_score is None:
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name=name,
+                detail="No score provided — specify frs_score or pcs_score.",
+            )
+        try:
+            score_value = frs_score if frs_score is not None else pcs_score
+            self._client.update_contact(contact_id, {
+                "customFields": [{"id": _CF_LEAD_SCORE, "field_value": str(score_value)}],
+            })
+            self._invalidate_contacts_cache()
+            parts = []
+            if frs_score is not None:
+                parts.append(f"FRS={frs_score}")
+            if pcs_score is not None:
+                parts.append(f"PCS={pcs_score}")
+            return ActionResult(
+                success=True,
+                action="score_updated",
+                contact_name=name,
+                detail=f"Updated {name} scores: {', '.join(parts)}",
+            )
+        except Exception as exc:
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name=name,
+                detail=f"Failed to update score for {name}: {exc}",
+            )

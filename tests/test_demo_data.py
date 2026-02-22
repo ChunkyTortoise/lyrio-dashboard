@@ -110,3 +110,54 @@ def test_platform_health_is_healthy(provider):
     health = provider.get_platform_health()
     assert health.overall_status == "healthy"
     assert health.active_bots == 3
+
+
+# ------------------------------------------------------------------
+# Write action tests
+# ------------------------------------------------------------------
+
+def test_send_sms_success(provider):
+    result = provider.send_sms("Maria", "Hi Maria, following up!")
+    assert result.success is True
+    assert result.action == "sms_sent"
+    assert "Maria" in result.contact_name
+    assert "[DEMO]" in result.detail
+
+
+def test_send_sms_unknown_lead(provider):
+    result = provider.send_sms("zzz_nobody", "test")
+    assert result.success is False
+    assert "zzz_nobody" in result.detail
+
+
+def test_enroll_in_workflow_success(provider):
+    result = provider.enroll_in_workflow("Maria", "Hot Seller Workflow")
+    assert result.success is True
+    assert result.action == "workflow_enrolled"
+    assert "Maria" in result.contact_name
+
+
+def test_update_temperature_success(provider):
+    result = provider.update_lead_temperature("Maria", "warm")
+    assert result.success is True
+    assert result.action == "tags_updated"
+    assert "warm" in result.detail
+
+
+def test_update_temperature_invalid(provider):
+    result = provider.update_lead_temperature("Maria", "boiling")
+    assert result.success is False
+    assert "boiling" in result.detail
+
+
+def test_update_score_success(provider):
+    result = provider.update_lead_score("Maria", frs_score=85.0)
+    assert result.success is True
+    assert result.action == "score_updated"
+    assert "FRS=85.0" in result.detail
+
+
+def test_update_score_out_of_range(provider):
+    result = provider.update_lead_score("Maria", frs_score=150.0)
+    assert result.success is False
+    assert "150.0" in result.detail
