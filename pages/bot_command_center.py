@@ -84,4 +84,4 @@ def render(provider) -> None:
             ])
             st.dataframe(df_h, use_container_width=True, hide_index=True)
         else:
-            st.info("No handoffs recorded")
+            st.info("No handoffs in the last 7 days")

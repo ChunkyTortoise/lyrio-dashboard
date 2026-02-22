@@ -35,7 +35,7 @@ _INPUT_COST_PER_MTOK = 3.0
 _OUTPUT_COST_PER_MTOK = 15.0
 _CACHE_COST_PER_MTOK = 0.30
 
-_NOW = datetime(2026, 2, 21, 12, 0, 0)
+_NOW = datetime.now().replace(microsecond=0)
 
 # Cost per conversation: 800 input + 400 output + 240 cache (30% of input)
 _COST_PER_CONV = (800 * _INPUT_COST_PER_MTOK + 400 * _OUTPUT_COST_PER_MTOK + 240 * _CACHE_COST_PER_MTOK) / 1_000_000
