@@ -104,11 +104,19 @@ def render(provider) -> None:
         with st.chat_message("assistant"):
             tool_indicator = st.empty()
 
+            _WRITE_TOOLS = {"send_sms", "enroll_in_workflow", "update_lead_temperature", "update_lead_score"}
+
             def _on_tool_call(tool_name: str) -> None:
-                tool_indicator.markdown(
-                    '<p style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;margin:0;">🔍 Checking lead data...</p>',
-                    unsafe_allow_html=True,
-                )
+                if tool_name in _WRITE_TOOLS:
+                    tool_indicator.markdown(
+                        '<p style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;margin:0;">⚡ Executing action...</p>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    tool_indicator.markdown(
+                        '<p style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;margin:0;">🔍 Checking lead data...</p>',
+                        unsafe_allow_html=True,
+                    )
 
             with st.spinner("Thinking..."):
                 try:

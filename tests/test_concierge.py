@@ -91,7 +91,7 @@ def test_chat_returns_text_response(provider):
 
 
 def test_chat_max_tool_rounds_respected(provider):
-    """Tool use loop stops after max_rounds=3."""
+    """Tool use loop stops after max_rounds=5."""
     mock_tool_block = MagicMock()
     mock_tool_block.type = "tool_use"
     mock_tool_block.name = "get_lead_summary"
@@ -110,16 +110,79 @@ def test_chat_max_tool_rounds_respected(provider):
     text_response.stop_reason = "end_turn"
     text_response.content = [mock_text_block]
 
-    # Return tool_use 4 times, then text — but loop should stop at 3
+    # Return tool_use 6 times, then text — but loop should stop at 5
     with patch("anthropic.Anthropic") as mock_anthropic:
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = [
-            tool_response, tool_response, tool_response, text_response
+            tool_response, tool_response, tool_response,
+            tool_response, tool_response, text_response,
         ]
         mock_anthropic.return_value = mock_client
 
         c = ConciergeChat(provider, api_key="test-key")
         result = c.chat("Test", history=[])
 
-    # Should have called create at most 3 times (max_rounds)
-    assert mock_client.messages.create.call_count <= 3
+    # Should have called create at most 5 times (max_rounds)
+    assert mock_client.messages.create.call_count <= 5
+
+
+# ------------------------------------------------------------------
+# Write tool tests
+# ------------------------------------------------------------------
+
+def test_execute_tool_send_sms_success(concierge):
+    result = concierge._execute_tool("send_sms", {"lead_name": "Maria", "message": "Hi!"})
+    data = json.loads(result)
+    assert data["success"] is True
+    assert data["action"] == "sms_sent"
+    assert "Maria" in data["contact"]
+
+
+def test_execute_tool_send_sms_unknown_lead(concierge):
+    result = concierge._execute_tool("send_sms", {"lead_name": "zzz_nobody", "message": "Hi!"})
+    data = json.loads(result)
+    assert data["success"] is False
+    assert "zzz_nobody" in data["detail"]
+
+
+def test_execute_tool_enroll_in_workflow(concierge):
+    result = concierge._execute_tool(
+        "enroll_in_workflow", {"lead_name": "Maria", "workflow_name": "Hot Seller Workflow"}
+    )
+    data = json.loads(result)
+    assert data["success"] is True
+    assert data["action"] == "workflow_enrolled"
+
+
+def test_execute_tool_update_temperature_success(concierge):
+    result = concierge._execute_tool(
+        "update_lead_temperature", {"lead_name": "Maria", "new_temperature": "warm"}
+    )
+    data = json.loads(result)
+    assert data["success"] is True
+    assert data["action"] == "tags_updated"
+
+
+def test_execute_tool_update_temperature_invalid(concierge):
+    result = concierge._execute_tool(
+        "update_lead_temperature", {"lead_name": "Maria", "new_temperature": "scorching"}
+    )
+    data = json.loads(result)
+    assert data["success"] is False
+
+
+def test_execute_tool_update_score_success(concierge):
+    result = concierge._execute_tool(
+        "update_lead_score", {"lead_name": "Maria", "frs_score": 75.0}
+    )
+    data = json.loads(result)
+    assert data["success"] is True
+    assert data["action"] == "score_updated"
+
+
+def test_execute_tool_update_score_out_of_range(concierge):
+    result = concierge._execute_tool(
+        "update_lead_score", {"lead_name": "Maria", "frs_score": 110.0}
+    )
+    data = json.loads(result)
+    assert data["success"] is False

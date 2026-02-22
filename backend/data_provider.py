@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from backend.models import (
+    ActionResult,
     ActivityEvent,
     BotStatus,
     ConversationSnippet,
@@ -39,6 +40,19 @@ class DataProvider(Protocol):
     def get_handoff_events(self, limit: int = 10) -> list[HandoffEvent]: ...
 
     def get_all_leads(self) -> list[LeadDetail]: ...
+
+    def send_sms(self, lead_name: str, message: str) -> ActionResult: ...
+
+    def enroll_in_workflow(self, lead_name: str, workflow_name: str) -> ActionResult: ...
+
+    def update_lead_temperature(self, lead_name: str, new_temperature: str) -> ActionResult: ...
+
+    def update_lead_score(
+        self,
+        lead_name: str,
+        frs_score: float | None = None,
+        pcs_score: float | None = None,
+    ) -> ActionResult: ...
 
 
 def create_data_provider(mode: str = "demo") -> DataProvider:

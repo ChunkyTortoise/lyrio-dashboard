@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from backend.models import (
+    ActionResult,
     ActivityEvent,
     BotCostData,
     BotStatus,
@@ -407,3 +408,99 @@ class DemoDataProvider:
             )
             for l in self._leads
         ]
+
+    # ------------------------------------------------------------------
+    # Write actions (demo stubs — never call GHL)
+    # ------------------------------------------------------------------
+
+    def send_sms(self, lead_name: str, message: str) -> ActionResult:
+        lead = self.get_lead_detail(lead_name)
+        if lead is None:
+            return ActionResult(
+                success=False,
+                action="sms_sent",
+                contact_name=lead_name,
+                detail=f"[DEMO] No lead found matching '{lead_name}'",
+            )
+        return ActionResult(
+            success=True,
+            action="sms_sent",
+            contact_name=lead.name,
+            detail=f"[DEMO] SMS sent to {lead.name}: \"{message}\"",
+        )
+
+    def enroll_in_workflow(self, lead_name: str, workflow_name: str) -> ActionResult:
+        lead = self.get_lead_detail(lead_name)
+        if lead is None:
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name=lead_name,
+                detail=f"[DEMO] No lead found matching '{lead_name}'",
+            )
+        return ActionResult(
+            success=True,
+            action="workflow_enrolled",
+            contact_name=lead.name,
+            detail=f"[DEMO] {lead.name} enrolled in '{workflow_name}'",
+        )
+
+    def update_lead_temperature(self, lead_name: str, new_temperature: str) -> ActionResult:
+        lead = self.get_lead_detail(lead_name)
+        if lead is None:
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name=lead_name,
+                detail=f"[DEMO] No lead found matching '{lead_name}'",
+            )
+        valid = {"hot", "warm", "cold"}
+        temp = new_temperature.lower().strip()
+        if temp not in valid:
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name=lead.name,
+                detail=f"[DEMO] Invalid temperature '{new_temperature}'. Must be hot, warm, or cold.",
+            )
+        return ActionResult(
+            success=True,
+            action="tags_updated",
+            contact_name=lead.name,
+            detail=f"[DEMO] Updated {lead.name} temperature to {temp}",
+        )
+
+    def update_lead_score(
+        self,
+        lead_name: str,
+        frs_score: float | None = None,
+        pcs_score: float | None = None,
+    ) -> ActionResult:
+        lead = self.get_lead_detail(lead_name)
+        if lead is None:
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name=lead_name,
+                detail=f"[DEMO] No lead found matching '{lead_name}'",
+            )
+        for label, score in (("frs_score", frs_score), ("pcs_score", pcs_score)):
+            if score is not None and not (0 <= score <= 100):
+                return ActionResult(
+                    success=False,
+                    action="score_updated",
+                    contact_name=lead.name,
+                    detail=f"[DEMO] {label} must be between 0 and 100, got {score}",
+                )
+        parts = []
+        if frs_score is not None:
+            parts.append(f"FRS={frs_score}")
+        if pcs_score is not None:
+            parts.append(f"PCS={pcs_score}")
+        score_str = ", ".join(parts) if parts else "no scores provided"
+        return ActionResult(
+            success=True,
+            action="score_updated",
+            contact_name=lead.name,
+            detail=f"[DEMO] Updated {lead.name} scores: {score_str}",
+        )

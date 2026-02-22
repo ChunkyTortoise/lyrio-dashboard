@@ -120,3 +120,11 @@ class PlatformHealth:
     overall_status: str            # "healthy" | "degraded"
     active_bots: int
     error_rate_24h: float
+
+
+@dataclass(frozen=True)
+class ActionResult:
+    success: bool
+    action: str          # "sms_sent" | "workflow_enrolled" | "tags_updated" | "score_updated"
+    contact_name: str
+    detail: str          # Human-readable summary
