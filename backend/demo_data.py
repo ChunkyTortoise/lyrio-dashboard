@@ -414,6 +414,13 @@ class DemoDataProvider:
     # ------------------------------------------------------------------
 
     def send_sms(self, lead_name: str, message: str) -> ActionResult:
+        if not lead_name or not lead_name.strip():
+            return ActionResult(
+                success=False,
+                action="sms_sent",
+                contact_name="",
+                detail="[DEMO] lead_name is required",
+            )
         lead = self.get_lead_detail(lead_name)
         if lead is None:
             return ActionResult(
@@ -430,6 +437,13 @@ class DemoDataProvider:
         )
 
     def enroll_in_workflow(self, lead_name: str, workflow_name: str) -> ActionResult:
+        if not lead_name or not lead_name.strip():
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name="",
+                detail="[DEMO] lead_name is required",
+            )
         lead = self.get_lead_detail(lead_name)
         if lead is None:
             return ActionResult(
@@ -437,6 +451,15 @@ class DemoDataProvider:
                 action="workflow_enrolled",
                 contact_name=lead_name,
                 detail=f"[DEMO] No lead found matching '{lead_name}'",
+            )
+        valid_workflows = {w.lower() for w in WORKFLOW_NAMES}
+        if workflow_name.lower() not in valid_workflows:
+            available = ", ".join(WORKFLOW_NAMES)
+            return ActionResult(
+                success=False,
+                action="workflow_enrolled",
+                contact_name=lead.name,
+                detail=f"[DEMO] Unknown workflow '{workflow_name}'. Available: {available}",
             )
         return ActionResult(
             success=True,
@@ -446,6 +469,13 @@ class DemoDataProvider:
         )
 
     def update_lead_temperature(self, lead_name: str, new_temperature: str) -> ActionResult:
+        if not lead_name or not lead_name.strip():
+            return ActionResult(
+                success=False,
+                action="tags_updated",
+                contact_name="",
+                detail="[DEMO] lead_name is required",
+            )
         lead = self.get_lead_detail(lead_name)
         if lead is None:
             return ActionResult(
@@ -476,6 +506,13 @@ class DemoDataProvider:
         frs_score: float | None = None,
         pcs_score: float | None = None,
     ) -> ActionResult:
+        if not lead_name or not lead_name.strip():
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name="",
+                detail="[DEMO] lead_name is required",
+            )
         lead = self.get_lead_detail(lead_name)
         if lead is None:
             return ActionResult(

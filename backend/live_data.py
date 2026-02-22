@@ -462,6 +462,8 @@ class LiveDataProvider:
 
     def _resolve_contact(self, lead_name: str) -> tuple[str, str] | None:
         """Return (contact_id, full_name) for the first contact matching lead_name, or None."""
+        if not lead_name or not lead_name.strip():
+            return None
         needle = lead_name.lower()
         contacts = self._get_contacts()
         match = next(
