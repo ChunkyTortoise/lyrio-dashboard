@@ -21,7 +21,10 @@ def render(provider) -> None:
 
     cb = provider.get_cost_breakdown()
     roi = cb.roi
-    period_label = datetime.strptime(cb.period_label, "%Y-%m").strftime("%b %Y")
+    try:
+        period_label = datetime.strptime(cb.period_label, "%Y-%m").strftime("%b %Y")
+    except ValueError:
+        period_label = cb.period_label  # already human-readable (e.g. "February 2026")
 
     # 4 metric cards
     c1, c2, c3, c4 = st.columns(4)

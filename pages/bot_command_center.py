@@ -25,22 +25,7 @@ def render(provider) -> None:
     tab_overview, tab_convs, tab_handoffs = st.tabs(["Overview", "Conversations", "Handoffs"])
 
     with tab_overview:
-        # Build dataframe for area chart — proportions from actual bot data
-        trends = provider.get_daily_trends(14)
-        total_all = sum(s.conversations_total for s in statuses) or 1
-        bot_pcts = {s.bot_id: s.conversations_total / total_all for s in statuses}
-        df = pd.DataFrame([
-            {
-                "date": t.date,
-                "seller": max(0, round(t.conversations * bot_pcts.get("seller", 0.35))),
-                "buyer": max(0, round(t.conversations * bot_pcts.get("buyer", 0.22))),
-                "lead": max(0, round(t.conversations * bot_pcts.get("lead", 0.43))),
-            }
-            for t in trends
-        ])
-        st.plotly_chart(area_chart(df), use_container_width=True)
-
-        # 4 stat columns
+        # 4 stat columns — above the chart so they're visible without scrolling
         total_convs = sum(s.conversations_total for s in statuses)
         avg_response = sum(s.avg_response_time_sec for s in statuses) / len(statuses)
 
@@ -57,6 +42,23 @@ def render(provider) -> None:
             render_stat(f"{success_rate:.0f}%", "Handoff success")
         with c4:
             render_stat(str(active), "Active conversations")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Build dataframe for area chart — proportions from actual bot data
+        trends = provider.get_daily_trends(14)
+        total_all = sum(s.conversations_total for s in statuses) or 1
+        bot_pcts = {s.bot_id: s.conversations_total / total_all for s in statuses}
+        df = pd.DataFrame([
+            {
+                "date": t.date,
+                "seller": max(0, round(t.conversations * bot_pcts.get("seller", 0.35))),
+                "buyer": max(0, round(t.conversations * bot_pcts.get("buyer", 0.22))),
+                "lead": max(0, round(t.conversations * bot_pcts.get("lead", 0.43))),
+            }
+            for t in trends
+        ])
+        st.plotly_chart(area_chart(df), use_container_width=True)
 
     with tab_convs:
         snippets = provider.get_recent_conversations(20)
