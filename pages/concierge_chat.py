@@ -6,6 +6,12 @@ import streamlit as st
 from backend.concierge import ConciergeChat
 from components import render_page_title
 
+
+@st.cache_resource
+def _get_concierge(_provider, api_key: str) -> ConciergeChat:
+    """Cache the ConciergeChat instance so the Anthropic client is created once."""
+    return ConciergeChat(_provider, api_key=api_key)
+
 _SUGGESTIONS = [
     "How many hot leads this week?",
     "What's my cost per qualified lead?",
@@ -106,7 +112,7 @@ def render(provider) -> None:
 
             with st.spinner("Thinking..."):
                 try:
-                    concierge = ConciergeChat(provider, api_key=api_key)
+                    concierge = _get_concierge(provider, api_key)
                     # Pass history excluding the current user message
                     history = messages[:-1]
                     response = concierge.chat(prompt, history=history, on_tool_call=_on_tool_call)
