@@ -63,9 +63,10 @@ def inject_css() -> None:
         #MainMenu, footer, header { visibility: hidden; }
         .stDeployButton { display: none; }
 
-        /* Hide sidebar collapse/expand buttons */
-        [data-testid="collapsedControl"] { display: none; }
-        button[data-testid="baseButton-header"] { display: none; }
+        /* Force sidebar always open — hide both toggle buttons */
+        section[data-testid="stSidebar"] { transform: none !important; min-width: 244px !important; }
+        [data-testid="collapsedControl"] { display: none !important; }
+        button[data-testid="baseButton-header"] { display: none !important; }
 
         /* Sidebar */
         [data-testid="stSidebar"] {
