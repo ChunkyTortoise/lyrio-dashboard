@@ -63,6 +63,10 @@ def inject_css() -> None:
         #MainMenu, footer, header { visibility: hidden; }
         .stDeployButton { display: none; }
 
+        /* Hide sidebar collapse/expand buttons */
+        [data-testid="collapsedControl"] { display: none; }
+        button[data-testid="baseButton-header"] { display: none; }
+
         /* Sidebar */
         [data-testid="stSidebar"] {
             background-color: #0A0C10 !important;
