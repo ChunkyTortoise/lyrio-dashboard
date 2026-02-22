@@ -29,28 +29,40 @@ _DEFAULTS: dict = {
     "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
     "activity_items_shown": 20,
     "api_key": "",
+    "data_mode": "Demo",
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Create data provider — live only when mode = "live" is explicitly set in secrets,
-# otherwise always demo (safe default for presentations and fresh deploys)
+
 @st.cache_resource
-def _get_provider() -> DataProvider:
+def _live_creds() -> tuple[str, str]:
+    """Returns (ghl_key, location_id) if configured in secrets, else ('', '')."""
     try:
-        mode_override = st.secrets.get("mode", "")
-        ghl_key = st.secrets.get("ghl", {}).get("api_key", "")
-        location_id = st.secrets.get("ghl", {}).get("location_id", "")
+        key = st.secrets.get("ghl", {}).get("api_key", "")
+        loc = st.secrets.get("ghl", {}).get("location_id", "")
+        return key, loc
     except Exception:
-        mode_override = ghl_key = location_id = ""
-    if mode_override == "live" and ghl_key and location_id:
-        from backend.ghl_client import GHLClient
-        from backend.live_data import LiveDataProvider
-        return LiveDataProvider(GHLClient(ghl_key, location_id))
+        return "", ""
+
+
+@st.cache_resource
+def _get_provider(mode: str) -> DataProvider:
+    """Create and cache a provider per mode ('Demo' or 'Live')."""
+    if mode == "Live":
+        ghl_key, location_id = _live_creds()
+        if ghl_key and location_id:
+            from backend.ghl_client import GHLClient
+            from backend.live_data import LiveDataProvider
+            return LiveDataProvider(GHLClient(ghl_key, location_id))
     return create_data_provider(mode="demo")
 
-provider = _get_provider()
+
+_ghl_key, _location_id = _live_creds()
+_has_live_creds = bool(_ghl_key and _location_id)
+
+provider = _get_provider(st.session_state["data_mode"])
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -69,12 +81,18 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     render_sidebar_status()
     st.markdown("---")
-    from backend.live_data import LiveDataProvider
-    _mode_label = "Live — Jorge's GHL" if isinstance(provider, LiveDataProvider) else "Demo mode — data is illustrative"
-    st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.75rem;color:#8B949E;margin:0;">{_mode_label}</p>',
-        unsafe_allow_html=True,
-    )
+    if _has_live_creds:
+        st.radio(
+            "Data source",
+            options=["Demo", "Live"],
+            key="data_mode",
+            horizontal=True,
+        )
+    else:
+        st.markdown(
+            '<p style="font-family:Inter,sans-serif;font-size:0.75rem;color:#8B949E;margin:0;">Demo mode — data is illustrative</p>',
+            unsafe_allow_html=True,
+        )
 
 # ── Page routing ──────────────────────────────────────────────────────────────
 if page == "Chat":
