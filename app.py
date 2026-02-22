@@ -34,14 +34,17 @@ for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Create data provider — live if GHL creds present, else demo
+# Create data provider — live if GHL creds present and mode != "demo", else demo
 @st.cache_resource
 def _get_provider() -> DataProvider:
     try:
+        mode_override = st.secrets.get("mode", "")
         ghl_key = st.secrets.get("ghl", {}).get("api_key", "")
         location_id = st.secrets.get("ghl", {}).get("location_id", "")
     except Exception:
-        ghl_key = location_id = ""
+        mode_override = ghl_key = location_id = ""
+    if mode_override == "demo":
+        return create_data_provider(mode="demo")
     if ghl_key and location_id:
         from backend.ghl_client import GHLClient
         from backend.live_data import LiveDataProvider
