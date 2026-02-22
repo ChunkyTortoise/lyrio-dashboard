@@ -143,6 +143,41 @@ _CACHE_COST_PER_MTOK = 0.30   # $ per million cache read tokens
 
 ---
 
+## When a Lead Goes Hot — What to Do
+
+The dashboard and concierge will surface hot leads but they won't act on them. That's your job (or a GHL workflow's job).
+
+**Immediate options when you see a hot lead:**
+
+1. **Call or text them directly** — go to GHL → Conversations → find their thread → reply manually
+2. **Trigger a follow-up workflow** — GHL → Contacts → [lead] → add a tag or manually enroll them in a follow-up workflow
+3. **Ask the concierge for context first** — Chat page → "Should I follow up with [name]?" or "Tell me about [name]" — it'll pull their score, timeline, last contact, and give you a recommendation
+
+**To automate hot lead follow-up:**
+GHL → Automation → Workflows → create a new workflow triggered by the `hot-seller` or `hot-lead` tag being applied → add your follow-up SMS or task steps.
+
+This way the moment a lead hits 80 FRS, GHL automatically fires your follow-up sequence without you having to watch the dashboard.
+
+---
+
+## What the Dashboard and Concierge Cannot Do
+
+The Lyrio dashboard is **read-only**. It observes your GHL data but never writes to it.
+
+| Action | Can Lyrio do it? | Where to do it instead |
+|--------|-----------------|----------------------|
+| Show lead temperatures & scores | ✅ Yes | Dashboard → Leads |
+| Tell you which leads to prioritize | ✅ Yes | Concierge → Chat |
+| Send an SMS to a lead | ❌ No | GHL → Conversations |
+| Follow up with someone automatically | ❌ No | GHL → Automation → Workflows |
+| Change a lead's tag or score | ❌ No | GHL → Contacts → [lead] |
+| Trigger a workflow | ❌ No | GHL → Contacts → manual enroll |
+| Book an appointment | ❌ No | GHL → Calendar or Conversations |
+
+**The concierge specifically:** it answers questions about your data — it cannot take actions. Asking "follow up with Maria" will get you advice on whether to follow up, not an actual message sent.
+
+---
+
 ## How a Lead Moves Through the System
 
 ```
