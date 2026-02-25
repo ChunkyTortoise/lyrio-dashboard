@@ -1,6 +1,7 @@
 """Concierge Chat page — AI assistant for Jorge's real estate business."""
 from __future__ import annotations
 
+import anthropic
 import streamlit as st
 
 from backend.concierge import ConciergeChat
@@ -124,8 +125,20 @@ def render(provider) -> None:
                     # Pass history excluding the current user message
                     history = messages[:-1]
                     response = concierge.chat(prompt, history=history, on_tool_call=_on_tool_call)
-                except Exception as exc:
-                    response = f"Something went wrong: {exc}"
+                except anthropic.AuthenticationError:
+                    response = "Invalid API key. Please check your Anthropic API key in the sidebar."
+                except anthropic.PermissionDeniedError:
+                    response = "API key doesn't have permission to use this model. Please check your Anthropic account."
+                except anthropic.RateLimitError:
+                    response = "Too many requests. Please wait a moment and try again."
+                except anthropic.BadRequestError as exc:
+                    msg = str(exc).lower()
+                    if "credit balance" in msg or "billing" in msg:
+                        response = "AI service is temporarily unavailable — credits need to be topped up. Please contact support."
+                    else:
+                        response = "Request failed. Please try rephrasing your question."
+                except Exception:
+                    response = "Something went wrong. Please try again in a moment."
             tool_indicator.empty()
             st.write(response)
 
