@@ -33,8 +33,8 @@ _COST_PER_CONV = (800 * _INPUT_CPM + 400 * _OUTPUT_CPM + 240 * _CACHE_CPM) / 1_0
 _AVG_COMMISSION = 18_000.0
 
 # Temperature tag sets (GHL applies these as-is)
-_HOT_TAGS = {"hot-seller", "hot-lead", "hot"}
-_WARM_TAGS = {"warm-seller", "warm-lead", "warm"}
+_HOT_TAGS = {"hot-seller", "hot-lead", "hot-buyer", "hot"}
+_WARM_TAGS = {"warm-seller", "warm-lead", "warm-buyer", "warm"}
 
 # All temperature tags that must be cleared before writing a new one
 _ALL_TEMP_TAGS = [
@@ -44,14 +44,14 @@ _ALL_TEMP_TAGS = [
     "hot", "warm", "cold",
 ]
 
-# Workflow display name → GHL workflow ID (placeholder IDs until Jorge provides real ones)
+# Workflow display name → GHL workflow ID
 _WORKFLOWS: dict[str, str] = {
-    "hot seller workflow": "wf-hot-seller-placeholder",
-    "warm seller workflow": "wf-warm-seller-placeholder",
-    "hot buyer workflow": "wf-hot-buyer-placeholder",
-    "notify agent workflow": "wf-notify-agent-placeholder",
-    "lead nurture sequence": "wf-lead-nurture-placeholder",
-    "appointment confirmation": "wf-appt-confirm-placeholder",
+    "hot seller workflow": "577d56c4-28af-4668-8d84-80f5db234f48",
+    "warm seller workflow": "c8334775-e5d8-422f-bb92-62606663c659",
+    "hot buyer workflow": "2c405e58-5746-4e14-b038-2e3836fa74fd",
+    "notify agent workflow": "f3fc268b-5f16-4854-af28-200024cb3c8b",
+    "lead nurture sequence": "c8334775-e5d8-422f-bb92-62606663c659",
+    "appointment confirmation": "f3fc268b-5f16-4854-af28-200024cb3c8b",
 }
 
 # Tags that indicate bot assignment
