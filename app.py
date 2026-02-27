@@ -21,20 +21,6 @@ from backend.data_provider import DataProvider, create_data_provider
 # Inject theme CSS
 inject_css()
 
-# Session state defaults
-_DEFAULTS: dict = {
-    "page": "Chat",
-    "chat_messages": [],
-    "cost_month": "2026-02",
-    "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
-    "activity_items_shown": 20,
-    "api_key": "",
-    "data_mode": "Demo",
-}
-for _k, _v in _DEFAULTS.items():
-    if _k not in st.session_state:
-        st.session_state[_k] = _v
-
 
 @st.cache_resource
 def _live_creds() -> tuple[str, str]:
@@ -61,6 +47,20 @@ def _get_provider(mode: str) -> DataProvider:
 
 _ghl_key, _location_id = _live_creds()
 _has_live_creds = bool(_ghl_key and _location_id)
+
+# Session state defaults — auto-select Live when GHL credentials are configured
+_DEFAULTS: dict = {
+    "page": "Chat",
+    "chat_messages": [],
+    "cost_month": "2026-02",
+    "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
+    "activity_items_shown": 20,
+    "api_key": "",
+    "data_mode": "Live" if _has_live_creds else "Demo",
+}
+for _k, _v in _DEFAULTS.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
 provider = _get_provider(st.session_state["data_mode"])
 
