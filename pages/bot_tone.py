@@ -28,19 +28,21 @@ def _save_settings(bot: str, payload: dict) -> bool:
         return False
 
 
-def render(provider) -> None:
-    render_page_title("Bot tone settings", "Edit the seller bot's voice, phrases, and questions")
+def _reset_state(bot: str, contact_id: str) -> bool:
+    try:
+        r = requests.delete(f"{BOT_API}/api/jorge-{bot}/{contact_id.strip()}/state", timeout=8)
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        st.error(f"Reset failed: {e}")
+        return False
 
-    settings = _fetch_settings()
-    if settings is None:
-        return
 
-    seller = settings.get("seller", {})
-
-    st.markdown("### Seller Bot")
+def _render_bot_section(bot: str, label: str, data: dict, q_labels: dict, q_hint: str = "") -> None:
+    """Render tone settings for a single bot (seller or buyer)."""
+    st.markdown(f"### {label}")
     st.caption("Changes apply immediately — no restart needed.")
 
-    # ── System Prompt ─────────────────────────────────────────────────────────
     with st.expander("Persona & system prompt", expanded=True):
         st.caption(
             "This is the instruction Claude follows for every reply. "
@@ -48,72 +50,126 @@ def render(provider) -> None:
         )
         system_prompt = st.text_area(
             "System prompt",
-            value=seller.get("system_prompt", ""),
+            value=data.get("system_prompt", ""),
             height=160,
             label_visibility="collapsed",
-            key="seller_system_prompt",
+            key=f"{bot}_system_prompt",
         )
-        if st.button("Save system prompt", key="save_prompt"):
-            if _save_settings("seller", {"system_prompt": system_prompt}):
+        if st.button("Save system prompt", key=f"save_{bot}_prompt"):
+            if _save_settings(bot, {"system_prompt": system_prompt}):
                 st.success("Saved.")
 
-    # ── Opener Phrases ────────────────────────────────────────────────────────
     with st.expander("Opener phrases", expanded=True):
-        st.caption(
-            "One of these is randomly picked and prepended to each question. "
-            "Put each phrase on its own line."
-        )
-        phrases = seller.get("jorge_phrases", [])
+        st.caption("One of these is randomly picked and prepended to each question. Put each phrase on its own line.")
+        phrases = data.get("jorge_phrases", [])
         phrases_text = st.text_area(
             "Phrases (one per line)",
             value="\n".join(phrases),
-            height=180,
+            height=150,
             label_visibility="collapsed",
-            key="seller_phrases",
+            key=f"{bot}_phrases",
         )
-        if st.button("Save phrases", key="save_phrases"):
+        if st.button("Save phrases", key=f"save_{bot}_phrases"):
             updated = [p.strip() for p in phrases_text.splitlines() if p.strip()]
             if not updated:
                 st.warning("Need at least one phrase.")
-            elif _save_settings("seller", {"jorge_phrases": updated}):
+            elif _save_settings(bot, {"jorge_phrases": updated}):
                 st.success("Saved.")
 
-    # ── Q1–Q4 Questions ───────────────────────────────────────────────────────
     with st.expander("Q1–Q4 questions", expanded=True):
-        st.caption(
-            "The 4 qualification questions Jorge asks every seller. "
-            "`{offer_amount}` in Q4 is auto-calculated (75% of seller's stated price) — keep it."
-        )
-        questions = seller.get("questions", {})
-        q_labels = {
+        if q_hint:
+            st.caption(q_hint)
+        questions = data.get("questions", {})
+        updated_questions: dict = {}
+        for key, qlabel in q_labels.items():
+            updated_questions[key] = st.text_area(
+                qlabel,
+                value=questions.get(key, questions.get(int(key), "")),
+                height=90,
+                key=f"{bot}_q{key}",
+            )
+        if st.button("Save questions", key=f"save_{bot}_questions"):
+            if _save_settings(bot, {"questions": updated_questions}):
+                st.success("Saved.")
+
+    with st.expander("Live preview — what Q1 looks like"):
+        import random
+        phrases_list = [
+            p.strip()
+            for p in st.session_state.get(f"{bot}_phrases", "\n".join(phrases)).splitlines()
+            if p.strip()
+        ]
+        q1 = st.session_state.get(f"{bot}_q1", questions.get("1", questions.get(1, "")))
+        opener = random.choice(phrases_list) if phrases_list else "Hey!"
+        st.info(f"{opener}. {q1}")
+
+
+def render(provider) -> None:
+    render_page_title("Bot tone settings", "Edit bot voices, phrases, and questions")
+
+    settings = _fetch_settings()
+    if settings is None:
+        return
+
+    # ── Seller Bot ────────────────────────────────────────────────────────────
+    _render_bot_section(
+        bot="seller",
+        label="Seller Bot",
+        data=settings.get("seller", {}),
+        q_labels={
             "1": "Q1 — Condition",
             "2": "Q2 — Price expectation",
             "3": "Q3 — Motivation",
             "4": "Q4 — Offer acceptance",
-        }
-        updated_questions: dict = {}
-        for key, label in q_labels.items():
-            updated_questions[key] = st.text_area(
-                label,
-                value=questions.get(key, questions.get(int(key), "")),
-                height=100,
-                key=f"seller_q{key}",
+        },
+        q_hint=(
+            "The 4 qualification questions Jorge asks every seller. "
+            "`{offer_amount}` in Q4 is auto-calculated (75% of seller's stated price) — keep it."
+        ),
+    )
+
+    st.markdown("---")
+
+    # ── Buyer Bot ─────────────────────────────────────────────────────────────
+    _render_bot_section(
+        bot="buyer",
+        label="Buyer Bot",
+        data=settings.get("buyer", {}),
+        q_labels={
+            "1": "Q1 — What they want",
+            "2": "Q2 — Pre-approved / cash?",
+            "3": "Q3 — Timeline",
+            "4": "Q4 — Motivation",
+        },
+    )
+
+    st.markdown("---")
+
+    # ── Reset Conversation ────────────────────────────────────────────────────
+    with st.expander("Reset a contact's conversation"):
+        st.caption(
+            "If a contact's conversation got stuck or you want the bot to start fresh, "
+            "enter their GHL Contact ID below. This clears their Q&A history — the bot will "
+            "greet them again from Q1 on their next message."
+        )
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            reset_contact_id = st.text_input(
+                "GHL Contact ID",
+                placeholder="e.g. 6Nkp3mT7xYqRwLdZ",
+                label_visibility="collapsed",
+                key="reset_contact_id",
             )
-
-        if st.button("Save questions", key="save_questions"):
-            if _save_settings("seller", {"questions": updated_questions}):
-                st.success("Saved.")
-
-    # ── Live preview ──────────────────────────────────────────────────────────
-    with st.expander("Live preview — what Q1 looks like"):
-        import random
-        phrases_list = [p.strip() for p in st.session_state.get("seller_phrases", "\n".join(phrases)).splitlines() if p.strip()]
-        q1 = st.session_state.get("seller_q1", questions.get("1", questions.get(1, "")))
-        opener = random.choice(phrases_list) if phrases_list else "Hey!"
-        st.info(f"{opener}. {q1}")
+        with col2:
+            reset_bot = st.selectbox("Bot", ["seller", "buyer"], key="reset_bot")
+        if st.button("Reset conversation", key="do_reset", type="secondary"):
+            if not reset_contact_id.strip():
+                st.warning("Enter a Contact ID first.")
+            elif _reset_state(reset_bot, reset_contact_id):
+                st.success(f"Cleared {reset_bot} bot state for {reset_contact_id.strip()}.")
 
     st.markdown("---")
     st.caption(
-        "⚠️ Settings are stored in bot memory — they reset if the bot restarts (rare). "
+        "⚠️ Bot tone settings are stored in memory — they reset if the server restarts (rare). "
         "Re-save after any deployment."
     )
