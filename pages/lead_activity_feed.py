@@ -48,7 +48,8 @@ def render(provider) -> None:
 
     # Fetch enough to have buffer after filtering
     shown = st.session_state.get("activity_items_shown", 20)
-    events = provider.get_recent_activity(limit=shown + 20)
+    with st.spinner("Loading activity..."):
+        events = provider.get_recent_activity(limit=shown + 20)
 
     # Apply filters
     filtered = []

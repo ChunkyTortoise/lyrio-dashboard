@@ -34,7 +34,6 @@ class LeadDetail:
     phone_masked: str              # "(909) ***-1234"
     temperature: str
     frs_score: float               # 0-100
-    pcs_score: float               # 0-100
     qualification_stage: str
     property_address: str
     city: str
@@ -42,6 +41,7 @@ class LeadDetail:
     bot_assigned: str
     conversation_count: int
     last_contact: datetime
+    contact_id: str = ""
 
 
 @dataclass(frozen=True)

@@ -51,7 +51,6 @@ class DataProvider(Protocol):
         self,
         lead_name: str,
         frs_score: float | None = None,
-        pcs_score: float | None = None,
     ) -> ActionResult: ...
 
 

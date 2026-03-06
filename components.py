@@ -47,17 +47,20 @@ def render_bot_status_card(bot_status) -> None:
     response = f"{bot_status.avg_response_time_sec:.1f}s"
     success = f"{bot_status.success_rate*100:.0f}%"
     color = _BOT_COLORS.get(bot_status.bot_id, "#6366F1")
+    dot_color = "#10b981" if bot_status.is_online else "#ef4444"
+    status_hint = "Online" if bot_status.is_online else "Offline"
     st.markdown(
         f"""<div class="lyrio-card" style="border-left:3px solid {color};">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
-            <span style="color:#10b981;font-size:0.6rem;">&#9679;</span>
+            <span style="color:{dot_color};font-size:0.6rem;" title="{status_hint}">&#9679;</span>
             <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#FFFFFF;">{bot_status.bot_name}</span>
+            {f'<span style="font-family:Inter,sans-serif;font-size:0.65rem;color:#ef4444;">Offline</span>' if not bot_status.is_online else ''}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;">
             <div><div style="font-size:1.25rem;font-weight:700;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;">{bot_status.conversations_today}</div>
                  <div style="font-size:0.7rem;color:#8B949E;">today</div></div>
             <div><div style="font-size:1.25rem;font-weight:700;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;">{response}</div>
-                 <div style="font-size:0.7rem;color:#8B949E;">avg response</div></div>
+                 <div style="font-size:0.7rem;color:#8B949E;">est. response</div></div>
         </div>
         <div style="font-size:0.7rem;color:#8B949E;margin-bottom:0.35rem;">Lead temperature</div>
         <div style="display:flex;height:4px;border-radius:2px;overflow:hidden;gap:1px;">
@@ -86,13 +89,32 @@ def render_activity_item(event) -> None:
         border = _EVENT_COLORS.get(event.event_type, "#8B949E")
 
     ts = event.timestamp.strftime("%b %d %H:%M")
+
+    # Bot badge
+    bot_badge = ""
+    if event.bot_id:
+        bot_color = _BOT_COLORS.get(event.bot_id, "#8B949E")
+        bot_label = event.bot_id.title() + " Bot"
+        bot_badge = (
+            f'<span style="background:{bot_color};color:white;font-size:0.65rem;'
+            f'padding:0.1rem 0.4rem;border-radius:3px;font-family:Inter,sans-serif;">'
+            f'{bot_label}</span>'
+        )
+
+    # Temperature pill from metadata
+    temp_meta = (event.metadata or {}).get("temperature", "")
+    temp_pill = render_temperature_pill(temp_meta) if temp_meta else ""
+
+    badges = " ".join(filter(None, [bot_badge, temp_pill]))
+
     st.markdown(
-        f"""<div style="border-left:3px solid {border};padding:0.5rem 0.75rem;margin-bottom:0.5rem;
+        f"""<div style="border-left:4px solid {border};padding:0.5rem 0.75rem;margin-bottom:0.5rem;
             background:rgba(13,17,23,0.5);border-radius:0 6px 6px 0;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.2rem;">
             <span style="font-family:Inter,sans-serif;font-size:0.85rem;color:#E6EDF3;">{event.description}</span>
             <span class="lyrio-mono" style="white-space:nowrap;margin-left:1rem;">{ts}</span>
         </div>
+        {f'<div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;margin-top:0.2rem;">{badges}</div>' if badges else ''}
         </div>""",
         unsafe_allow_html=True,
     )
@@ -132,6 +154,29 @@ def render_conversation_item(snippet) -> None:
     )
 
 
+def render_alerts_badge(provider) -> None:
+    """Show active alerts count in sidebar."""
+    if not hasattr(provider, 'get_active_alerts'):
+        return
+    try:
+        alerts = provider.get_active_alerts()
+    except Exception:
+        return
+    if not alerts:
+        return
+    with st.sidebar:
+        with st.expander(f"\U0001f514 {len(alerts)} Active Alert(s)", expanded=False):
+            for alert in alerts:
+                severity = alert.get("severity", "info")
+                rule = alert.get("rule_name", "Unknown")
+                icon = "\U0001f534" if severity == "critical" else "\U0001f7e1"
+                st.write(f"{icon} **{rule}**")
+                st.caption(alert.get("message", ""))
+                if st.button("Acknowledge", key=f"ack_{alert.get('id', rule)}"):
+                    if hasattr(provider, 'acknowledge_alert'):
+                        provider.acknowledge_alert(alert.get('id'))
+
+
 def render_sidebar_brand() -> None:
     st.markdown(
         """<div style="padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -169,11 +214,30 @@ def render_sidebar_context(page: str, data) -> None:
     )
 
 
-def render_sidebar_status() -> None:
+def render_sidebar_status(provider=None) -> None:
+    try:
+        if provider is not None:
+            health = provider.get_platform_health()
+            status = health.overall_status
+        else:
+            status = "healthy"
+    except Exception:
+        status = "unknown"
+
+    if status == "healthy":
+        color = "#10b981"
+        label = "All systems operational"
+    elif status == "degraded":
+        color = "#f59e0b"
+        label = "Degraded — GHL API issues"
+    else:
+        color = "#8B949E"
+        label = "Status unknown"
+
     st.markdown(
-        """<div style="display:flex;align-items:center;gap:0.4rem;">
-        <span style="color:#10b981;font-size:0.7rem;">&#9679;</span>
-        <span style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;">All systems operational</span>
+        f"""<div style="display:flex;align-items:center;gap:0.4rem;">
+        <span style="color:{color};font-size:0.7rem;">&#9679;</span>
+        <span style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;">{label}</span>
         </div>""",
         unsafe_allow_html=True,
     )

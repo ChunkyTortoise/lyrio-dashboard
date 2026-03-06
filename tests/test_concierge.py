@@ -186,3 +186,35 @@ def test_execute_tool_update_score_out_of_range(concierge):
     )
     data = json.loads(result)
     assert data["success"] is False
+
+
+# ------------------------------------------------------------------
+# New tool tests — conversation transcript, performance, alerts
+# ------------------------------------------------------------------
+
+def test_execute_tool_get_conversation_transcript_no_provider_method(concierge):
+    """DemoDataProvider lacks get_conversation_transcript -> error."""
+    result = concierge._execute_tool("get_conversation_transcript", {"lead_name": "Maria"})
+    data = json.loads(result)
+    # DemoDataProvider has no contact_id set (empty string) or no method
+    assert "error" in data or "message" in data
+
+
+def test_execute_tool_get_conversation_transcript_not_found(concierge):
+    result = concierge._execute_tool("get_conversation_transcript", {"lead_name": "zzz_nobody"})
+    data = json.loads(result)
+    assert "error" in data
+
+
+def test_execute_tool_get_performance_metrics_no_provider_method(concierge):
+    """DemoDataProvider lacks get_performance_metrics -> error."""
+    result = concierge._execute_tool("get_performance_metrics", {})
+    data = json.loads(result)
+    assert "error" in data
+
+
+def test_execute_tool_get_alerts_no_provider_method(concierge):
+    """DemoDataProvider lacks get_active_alerts -> message."""
+    result = concierge._execute_tool("get_alerts", {})
+    data = json.loads(result)
+    assert "message" in data

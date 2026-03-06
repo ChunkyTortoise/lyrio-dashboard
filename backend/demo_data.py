@@ -36,8 +36,6 @@ _INPUT_COST_PER_MTOK = 3.0
 _OUTPUT_COST_PER_MTOK = 15.0
 _CACHE_COST_PER_MTOK = 0.30
 
-_NOW = datetime.now().replace(microsecond=0)
-
 # Cost per conversation: 800 input + 400 output + 240 cache (30% of input)
 _COST_PER_CONV = (800 * _INPUT_COST_PER_MTOK + 400 * _OUTPUT_COST_PER_MTOK + 240 * _CACHE_COST_PER_MTOK) / 1_000_000
 
@@ -46,6 +44,7 @@ class DemoDataProvider:
     """Fully deterministic demo data backed by seeded random."""
 
     def __init__(self, seed: int = 20260221) -> None:
+        self._now = datetime.now().replace(microsecond=0)
         self._rng = random.Random(seed)
         self._leads = self._generate_leads()
         self._activity = self._generate_activity()
@@ -75,21 +74,21 @@ class DemoDataProvider:
                 stage = self._rng.choice(["Appointment Scheduled", "Qualified"])
                 bot = "seller"
                 frs = round(self._rng.uniform(80, 98), 1)
-                pcs = round(self._rng.uniform(80, 98), 1)
+                _ = round(self._rng.uniform(80, 98), 1)  # consume rng for seed stability
                 timeline = self._rng.choice(["ASAP", "1-3 months"])
             elif temp == "warm":
                 conv_count = self._rng.randint(2, 4)
                 stage = "Qualifying"
                 bot = self._rng.choice(["seller", "buyer"])
                 frs = round(self._rng.uniform(45, 79), 1)
-                pcs = round(self._rng.uniform(45, 79), 1)
+                _ = round(self._rng.uniform(45, 79), 1)  # consume rng for seed stability
                 timeline = self._rng.choice(TIMELINE_OPTIONS[1:3])  # "1-3 months" or "3-6 months"
             else:
                 conv_count = self._rng.randint(1, 2)
                 stage = "Initial Contact"
                 bot = "lead"
                 frs = round(self._rng.uniform(10, 39), 1)
-                pcs = round(self._rng.uniform(10, 39), 1)
+                _ = round(self._rng.uniform(10, 39), 1)  # consume rng for seed stability
                 timeline = self._rng.choice(TIMELINE_OPTIONS[3:])  # "6-12 months" or "Just curious"
 
             last_digits = f"{self._rng.randint(1000, 9999)}"
@@ -101,7 +100,6 @@ class DemoDataProvider:
                 "phone_masked": phone,
                 "temperature": temp,
                 "frs_score": frs,
-                "pcs_score": pcs,
                 "qualification_stage": stage,
                 "property_address": PROPERTY_ADDRESSES[i],
                 "city": "Rancho Cucamonga",
@@ -109,7 +107,8 @@ class DemoDataProvider:
                 "timeline": timeline,
                 "bot_assigned": bot,
                 "conversation_count": conv_count,
-                "last_contact": _NOW - timedelta(hours=hours_ago),
+                "last_contact": self._now - timedelta(hours=hours_ago),
+                "contact_id": f"demo-{i}",
             })
         return leads
 
@@ -131,7 +130,7 @@ class DemoDataProvider:
                 etype = self._rng.choice(event_types)
                 bot = lead["bot_assigned"] if etype != "handoff" else None
                 minutes_ago = self._rng.randint(5, 2880)  # last 48 hours
-                ts = _NOW - timedelta(minutes=minutes_ago)
+                ts = self._now - timedelta(minutes=minutes_ago)
 
                 if etype == "message_sent":
                     bot_name = {"seller": "Seller", "buyer": "Buyer", "lead": "Lead"}.get(lead["bot_assigned"], "Lead")
@@ -179,7 +178,7 @@ class DemoDataProvider:
                 lead_name=lead["name"],
                 bot_id=lead["bot_assigned"],
                 description=f"Follow-up message to {lead['name']}",
-                timestamp=_NOW - timedelta(minutes=minutes_ago),
+                timestamp=self._now - timedelta(minutes=minutes_ago),
                 metadata={"bot": lead["bot_assigned"], "lead_temperature": lead["temperature"]},
             ))
 
@@ -203,7 +202,7 @@ class DemoDataProvider:
                 lead_name=lead["name"],
                 bot_id=lead["bot_assigned"],
                 message_preview=preview,
-                timestamp=_NOW - timedelta(minutes=minutes_ago),
+                timestamp=self._now - timedelta(minutes=minutes_ago),
                 temperature=lead["temperature"],
                 message_count=lead["conversation_count"] * self._rng.randint(3, 8),
             ))
@@ -227,7 +226,7 @@ class DemoDataProvider:
                 lead_name=lead["name"],
                 confidence=round(self._rng.uniform(0.70, 0.95), 2),
                 success=self._rng.random() <= 0.80,
-                timestamp=_NOW - timedelta(minutes=minutes_ago),
+                timestamp=self._now - timedelta(minutes=minutes_ago),
             ))
         handoffs.sort(key=lambda h: h.timestamp, reverse=True)
         return handoffs
@@ -282,7 +281,7 @@ class DemoDataProvider:
         warm = sum(1 for l in self._leads if l["temperature"] == "warm")
         cold = sum(1 for l in self._leads if l["temperature"] == "cold")
         qualified = sum(1 for l in self._leads if l["qualification_stage"] in ("Qualified", "Appointment Scheduled"))
-        recent_cutoff = _NOW - timedelta(hours=24)
+        recent_cutoff = self._now - timedelta(hours=24)
         new_today = sum(1 for l in self._leads if l["last_contact"] >= recent_cutoff)
         return LeadSummary(
             hot_count=hot,
@@ -342,7 +341,6 @@ class DemoDataProvider:
                     phone_masked=lead["phone_masked"],
                     temperature=lead["temperature"],
                     frs_score=lead["frs_score"],
-                    pcs_score=lead["pcs_score"],
                     qualification_stage=lead["qualification_stage"],
                     property_address=lead["property_address"],
                     city=lead["city"],
@@ -350,6 +348,7 @@ class DemoDataProvider:
                     bot_assigned=lead["bot_assigned"],
                     conversation_count=lead["conversation_count"],
                     last_contact=lead["last_contact"],
+                    contact_id=lead.get("contact_id", ""),
                 )
         return None
 
@@ -363,7 +362,7 @@ class DemoDataProvider:
     def get_daily_trends(self, days: int = 14) -> list[DailyTrend]:
         trends: list[DailyTrend] = []
         for d in range(days):
-            day = _NOW - timedelta(days=days - 1 - d)
+            day = self._now - timedelta(days=days - 1 - d)
             # Base: seller=3, buyer=2, lead=4 = 9/day + noise
             seller_conv = 3 + self._rng.randint(-1, 2)
             buyer_conv = 2 + self._rng.randint(-1, 2)
@@ -397,7 +396,6 @@ class DemoDataProvider:
                 phone_masked=l["phone_masked"],
                 temperature=l["temperature"],
                 frs_score=l["frs_score"],
-                pcs_score=l["pcs_score"],
                 qualification_stage=l["qualification_stage"],
                 property_address=l["property_address"],
                 city=l["city"],
@@ -405,6 +403,7 @@ class DemoDataProvider:
                 bot_assigned=l["bot_assigned"],
                 conversation_count=l["conversation_count"],
                 last_contact=l["last_contact"],
+                contact_id=l.get("contact_id", ""),
             )
             for l in self._leads
         ]
@@ -504,7 +503,6 @@ class DemoDataProvider:
         self,
         lead_name: str,
         frs_score: float | None = None,
-        pcs_score: float | None = None,
     ) -> ActionResult:
         if not lead_name or not lead_name.strip():
             return ActionResult(
@@ -521,20 +519,14 @@ class DemoDataProvider:
                 contact_name=lead_name,
                 detail=f"[DEMO] No lead found matching '{lead_name}'",
             )
-        for label, score in (("frs_score", frs_score), ("pcs_score", pcs_score)):
-            if score is not None and not (0 <= score <= 100):
-                return ActionResult(
-                    success=False,
-                    action="score_updated",
-                    contact_name=lead.name,
-                    detail=f"[DEMO] {label} must be between 0 and 100, got {score}",
-                )
-        parts = []
-        if frs_score is not None:
-            parts.append(f"FRS={frs_score}")
-        if pcs_score is not None:
-            parts.append(f"PCS={pcs_score}")
-        score_str = ", ".join(parts) if parts else "no scores provided"
+        if frs_score is not None and not (0 <= frs_score <= 100):
+            return ActionResult(
+                success=False,
+                action="score_updated",
+                contact_name=lead.name,
+                detail=f"[DEMO] frs_score must be between 0 and 100, got {frs_score}",
+            )
+        score_str = f"FRS={frs_score}" if frs_score is not None else "no scores provided"
         return ActionResult(
             success=True,
             action="score_updated",

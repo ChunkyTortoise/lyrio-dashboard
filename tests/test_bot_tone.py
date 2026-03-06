@@ -70,6 +70,31 @@ def test_fetch_settings_sends_auth_header():
     assert captured_kwargs.get("headers", {}).get("X-Admin-Key") == "key-xyz"
 
 
+def test_fetch_settings_http_error_no_url_exposed():
+    """On HTTP error, st.warning must not contain the raw API URL."""
+    import requests as real_requests
+
+    secrets = _make_secrets(api_url="https://jorge-realty-ai-xxdf.onrender.com", admin_api_key="key")
+    module, mock_st = _load_module(secrets)
+    mock_st.secrets = secrets
+    mock_st.session_state.get.return_value = None  # no cache
+
+    def fake_get(url, **kwargs):
+        raise real_requests.HTTPError("403 Forbidden")
+
+    warning_calls: list = []
+    mock_st.warning.side_effect = lambda msg, **kw: warning_calls.append(msg)
+
+    with patch.object(module, "st", mock_st), patch("requests.get", fake_get):
+        result = module._fetch_settings()
+
+    assert result is None
+    # Warning must not expose the raw API URL
+    for msg in warning_calls:
+        assert "jorge-realty-ai-xxdf" not in str(msg)
+        assert "/admin/settings" not in str(msg)
+
+
 def test_reset_state_uses_new_admin_endpoint():
     """_reset_state() must call DELETE /admin/reset-state/{bot}/{contact_id}."""
     secrets = _make_secrets(api_url="https://jorge-api.test", admin_api_key="key-xyz")
