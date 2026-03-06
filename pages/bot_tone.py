@@ -16,11 +16,54 @@ def _auth_headers() -> dict:
 
 def _fetch_settings() -> dict | None:
     try:
-        r = requests.get(f"{_api_url()}/admin/settings", headers=_auth_headers(), timeout=8)
+        api_url = _api_url()
+        headers = _auth_headers()
+    except Exception:
+        st.error("Bot API credentials are not configured — add `jorge_bot` to Streamlit secrets.")
+        return None
+
+    # Use cache key in session state for 5-min TTL
+    cache_key = "_bot_tone_settings_cache"
+    cache_ts_key = "_bot_tone_settings_ts"
+    import time as _time
+    now_ts = _time.time()
+    cached = st.session_state.get(cache_key)
+    cached_ts = st.session_state.get(cache_ts_key, 0.0)
+    if (
+        cached is not None
+        and isinstance(cached_ts, (int, float))
+        and (now_ts - cached_ts) < 300
+    ):
+        return cached
+
+    try:
+        r = requests.get(f"{api_url}/admin/settings", headers=headers, timeout=8)
         r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        st.error(f"Could not reach bot API: {e}")
+        result = r.json()
+        st.session_state[cache_key] = result
+        st.session_state[cache_ts_key] = now_ts
+        return result
+    except requests.HTTPError:
+        if cached is not None:
+            st.warning("Bot API is temporarily unreachable — showing cached settings. Check Render if this persists.")
+            if st.button("Retry", key="_tone_retry"):
+                del st.session_state[cache_key]
+                st.rerun()
+            return cached
+        st.warning("Bot API is temporarily unreachable — check Render.")
+        if st.button("Retry", key="_tone_retry"):
+            st.rerun()
+        return None
+    except Exception:
+        if cached is not None:
+            st.warning("Bot API is temporarily unreachable — showing cached settings.")
+            if st.button("Retry", key="_tone_retry"):
+                del st.session_state[cache_key]
+                st.rerun()
+            return cached
+        st.warning("Bot API is temporarily unreachable — check Render.")
+        if st.button("Retry", key="_tone_retry"):
+            st.rerun()
         return None
 
 

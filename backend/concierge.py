@@ -32,7 +32,9 @@ Before calling ANY write tool you MUST:
 2. Propose exactly what you plan to do — spell out the SMS text, workflow name, new temperature, or new score.
 3. Ask "Want me to go ahead?" (or similar) and wait for explicit confirmation.
 4. ONLY call the write tool AFTER the user explicitly says yes, confirms, or approves.
-Never combine a read lookup and a write action in the same turn. Never call a write tool speculatively."""
+Never combine a read lookup and a write action in the same turn. Never call a write tool speculatively.
+
+For conversation details, use get_conversation_transcript. For system health, use get_performance_metrics or get_alerts. For stalled leads and re-engagement history, use get_stall_history (optionally pass a lead name)."""
 
 _TOOLS: list[dict[str, Any]] = [
     {
@@ -63,7 +65,7 @@ _TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "get_lead_detail",
-        "description": "Get detailed info about a specific lead: temperature, FRS/PCS scores, qualification stage, property address, timeline, assigned bot, conversation count.",
+        "description": "Get detailed info about a specific lead: temperature, FRS score, qualification stage, property address, timeline, assigned bot, conversation count.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -129,14 +131,53 @@ _TOOLS: list[dict[str, Any]] = [
             "required": ["lead_name", "frs_score"],
         },
     },
+    {
+        "name": "get_conversation_transcript",
+        "description": "Get the full Q&A conversation transcript for a lead, showing their qualification progress through Q0-Q4-QUALIFIED stages.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lead_name": {"type": "string", "description": "Full or partial lead name"},
+            },
+            "required": ["lead_name"],
+        },
+    },
+    {
+        "name": "get_performance_metrics",
+        "description": "Get real-time performance metrics: AI response times, cache hit rates, GHL API health, 5-minute rule compliance.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "get_alerts",
+        "description": "Get currently active system alerts: threshold breaches for error rate, response time, cache hit rate, handoff failures.",
+        "input_schema": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "get_stall_history",
+        "description": "Get stall/re-engagement stats for a specific lead or overall. Shows stalled count, reply rate, and stage breakdown.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lead_name": {
+                    "type": "string",
+                    "description": "Full or partial lead name. Omit for overall stall stats.",
+                },
+            },
+            "required": [],
+        },
+    },
 ]
+
+
+_DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 
 class ConciergeChat:
     """Synchronous Claude tool_use concierge for Lyrio dashboard."""
 
-    def __init__(self, data_provider: DataProvider, api_key: str = "") -> None:
+    def __init__(self, data_provider: DataProvider, api_key: str = "", model: str = "") -> None:
         self._provider = data_provider
+        self._model = model or _DEFAULT_MODEL
         self._client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
 
     def chat(
@@ -163,7 +204,7 @@ class ConciergeChat:
         response = None
         for _ in range(max_rounds):
             response = self._client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=self._model,
                 max_tokens=1024,
                 system=_SYSTEM_PROMPT,
                 tools=_TOOLS,
@@ -276,7 +317,6 @@ class ConciergeChat:
                     "phone": detail.phone_masked,
                     "temperature": detail.temperature,
                     "frs_score": round(detail.frs_score, 1),
-                    "pcs_score": round(detail.pcs_score, 1),
                     "stage": detail.qualification_stage,
                     "property": detail.property_address,
                     "city": detail.city,
@@ -329,6 +369,65 @@ class ConciergeChat:
                     "contact": result.contact_name,
                     "detail": result.detail,
                 })
+
+            if tool_name == "get_conversation_transcript":
+                lead_name = tool_input.get("lead_name", "")
+                detail = self._provider.get_lead_detail(lead_name)
+                if detail is None:
+                    return json.dumps({"error": f"No lead found matching '{lead_name}'"})
+                contact_id = getattr(detail, "contact_id", "")
+                if not contact_id:
+                    return json.dumps({"error": f"No contact ID available for '{lead_name}'. Jorge API required."})
+                if not hasattr(self._provider, "get_conversation_transcript"):
+                    return json.dumps({"error": "Conversation transcripts require Jorge API mode."})
+                transcript = self._provider.get_conversation_transcript(contact_id)
+                if not transcript:
+                    return json.dumps({"message": f"No conversation transcript found for {detail.name}."})
+                summaries = []
+                for conv in transcript:
+                    history = conv.get("conversation_history", [])
+                    msg_count = len(history) if isinstance(history, list) else 0
+                    summaries.append({
+                        "bot": conv.get("bot_type", "unknown"),
+                        "stage": conv.get("stage", "?"),
+                        "temperature": conv.get("temperature", "?"),
+                        "messages": msg_count,
+                        "extracted_data": conv.get("extracted_data", {}),
+                        "last_messages": [
+                            {"role": m.get("role"), "text": str(m.get("content", ""))[:150]}
+                            for m in (history[-4:] if isinstance(history, list) else [])
+                        ],
+                    })
+                return json.dumps({"lead": detail.name, "conversations": summaries})
+
+            if tool_name == "get_performance_metrics":
+                if not hasattr(self._provider, "get_performance_metrics"):
+                    return json.dumps({"error": "Performance metrics require Jorge API mode."})
+                perf = self._provider.get_performance_metrics()
+                return json.dumps(perf if perf else {"message": "No performance data available."})
+
+            if tool_name == "get_alerts":
+                if not hasattr(self._provider, "get_active_alerts"):
+                    return json.dumps({"message": "Alerts require Jorge API mode."})
+                alerts = self._provider.get_active_alerts()
+                if not alerts:
+                    return json.dumps({"message": "No active alerts."})
+                return json.dumps({"active_alerts": alerts, "count": len(alerts)})
+
+            if tool_name == "get_stall_history":
+                if not hasattr(self._provider, "get_stall_stats"):
+                    return json.dumps({"message": "Stall stats require Jorge API mode."})
+                lead_name = tool_input.get("lead_name", "")
+                contact_id: str | None = None
+                if lead_name:
+                    detail = self._provider.get_lead_detail(lead_name)
+                    if detail is None:
+                        return json.dumps({"error": f"No lead found matching '{lead_name}'"})
+                    contact_id = getattr(detail, "contact_id", None)
+                stats = self._provider.get_stall_stats(contact_id=contact_id)
+                if not stats:
+                    return json.dumps({"message": "No stall data available."})
+                return json.dumps(stats)
 
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
 

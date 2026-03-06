@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .streamlit/secrets.toml
 .DS_Store
+
+# Owner reference — contains live credentials
+JORGE_OWNER_REFERENCE.md
+*OWNER_REFERENCE*

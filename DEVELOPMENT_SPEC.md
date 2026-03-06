@@ -54,8 +54,8 @@ None open.
 
 | # | Issue | File | Fix |
 |---|-------|------|-----|
-| H1 | Month selector only filters the bar chart, not the 4 metric cards | `cost_roi_tracker.py:21` | Demo limitation: `DemoDataProvider` only has one month of data. `LiveDataProvider` will query by month when wired up. |
-| H4 | `_NOW` is a module-level constant frozen at `datetime(2026, 2, 21)` | `demo_data.py:38` | Demo data always appears 0–48h old relative to Feb 21. Use `datetime.now()` for realistic relative timestamps. |
+| H1 | ~~Month selector only filters the bar chart, not the 4 metric cards~~ **FIXED** — Metric cards now compute from month-filtered `DailyTrend` data. Month selector is dynamic from actual trend dates. | `cost_roi_tracker.py` | Resolved. |
+| H4 | ~~`_NOW` is a module-level constant frozen at `datetime(2026, 2, 21)`~~ **FIXED** — `self._now` is now an instance attribute set in `__init__`, so each `DemoDataProvider()` uses current time. | `demo_data.py` | Resolved. |
 
 ### P2 — Medium Priority
 
@@ -63,7 +63,7 @@ None open.
 |---|-------|------|-------|
 | M1 | Suggestion chips do a full re-run before displaying the question | `concierge_chat.py:60-64` | Handled via `pending_question` + `st.rerun()`. Works but slightly slow. |
 | M4 | Bot command center Overview stats are below the chart, requiring scroll | `bot_command_center.py:49-57` | Move the 4 stat cards above the chart. |
-| M5 | `ConciergeChat` is instantiated on every message — `anthropic.Anthropic()` client recreated each time | `concierge_chat.py` | Cache client or lift `ConciergeChat` into `@st.cache_resource`. |
+| M5 | ~~`ConciergeChat` is instantiated on every message — `anthropic.Anthropic()` client recreated each time~~ **FIXED** — `_get_concierge()` uses `@st.cache_resource` to cache the `ConciergeChat` instance (including the Anthropic client). | `concierge_chat.py:11-14` | Resolved. |
 
 ### P3 — Low Priority / Polish
 

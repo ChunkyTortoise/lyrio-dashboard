@@ -8,10 +8,18 @@ from backend.concierge import ConciergeChat
 from components import render_page_title
 
 
+def _get_model() -> str:
+    """Get concierge model from secrets, with default."""
+    try:
+        return st.secrets.get("anthropic", {}).get("model", "") or "claude-sonnet-4-20250514"
+    except Exception:
+        return "claude-sonnet-4-20250514"
+
+
 @st.cache_resource
-def _get_concierge(_provider, api_key: str) -> ConciergeChat:
+def _get_concierge(_provider, api_key: str, model: str) -> ConciergeChat:
     """Cache the ConciergeChat instance so the Anthropic client is created once."""
-    return ConciergeChat(_provider, api_key=api_key)
+    return ConciergeChat(_provider, api_key=api_key, model=model)
 
 _SUGGESTIONS = [
     "How many hot leads this week?",
@@ -19,6 +27,53 @@ _SUGGESTIONS = [
     "Should I follow up with Maria Gonzalez?",
     "Show me seller bot performance",
 ]
+
+
+def _fallback_response(prompt: str, provider) -> str:
+    """Deterministic backup response when the LLM is unavailable."""
+    text = prompt.lower()
+
+    if "follow up with" in text:
+        name = prompt.split("with", 1)[-1].strip(" ?.!")
+        detail = provider.get_lead_detail(name) if name else None
+        if detail is None:
+            return "I couldn't find that lead in the dashboard data. Try the full name."
+        if detail.temperature == "hot":
+            recommendation = "Yes — prioritize this follow-up now."
+        elif detail.temperature == "warm":
+            recommendation = "Yes — follow up soon, ideally within 24 hours."
+        else:
+            recommendation = "Not urgent yet. Keep them in nurture unless new activity appears."
+        return (
+            f"{detail.name} is {detail.temperature.upper()} (FRS {detail.frs_score:.1f}). "
+            f"Stage: {detail.qualification_stage}. Last contact: {detail.last_contact.strftime('%b %d %H:%M')}. "
+            f"{recommendation}"
+        )
+
+    if "seller bot" in text and ("performance" in text or "status" in text):
+        seller = next((s for s in provider.get_bot_statuses() if s.bot_id == "seller"), None)
+        if seller:
+            t = seller.temp_distribution
+            return (
+                f"Seller Bot is online with {seller.conversations_today} conversations today, "
+                f"{seller.avg_response_time_sec:.1f}s average response, and {seller.success_rate * 100:.0f}% success. "
+                f"Lead mix: {t.get('hot', 0)} hot, {t.get('warm', 0)} warm, {t.get('cold', 0)} cold."
+            )
+
+    if "cost" in text or "roi" in text:
+        cb = provider.get_cost_breakdown()
+        roi = cb.roi
+        return (
+            f"{cb.period_label}: total AI spend is ${cb.total_cost_usd:.2f}. "
+            f"Cost per qualified lead is ${roi.cost_per_lead:.2f}, cost per conversation is ${roi.cost_per_conversation:.4f}, "
+            f"and estimated ROI is {roi.roi_multiplier:.0f}x."
+        )
+
+    ls = provider.get_lead_summary()
+    return (
+        f"Current lead summary: {ls.hot_count} hot, {ls.warm_count} warm, {ls.cold_count} cold "
+        f"({ls.total_count} total). Qualified today: {ls.qualified_today}. New today: {ls.new_today}."
+    )
 
 
 def _get_api_key() -> str:
@@ -62,8 +117,28 @@ def render(provider) -> None:
             st.session_state.chat_messages = []
             st.rerun()
 
-    # Empty state — suggestion chips
+    # Empty state — suggestion chips + daily digest
     if not messages:
+        # Daily digest card
+        try:
+            summary = provider.get_lead_summary()
+            trends = provider.get_daily_trends(1)
+            today_cost = trends[0].cost_usd if trends else 0.0
+            st.markdown(
+                f'<div class="lyrio-card" style="margin-bottom:1rem;">'
+                f'<span style="font-family:Inter,sans-serif;font-size:0.8rem;color:#8B949E;">Today: </span>'
+                f'<span style="color:#ef4444;font-weight:700;">{summary.new_today} new</span>'
+                f'<span style="color:#8B949E;"> &middot; </span>'
+                f'<span style="color:#10b981;font-weight:700;">{summary.hot_count} hot</span>'
+                f'<span style="color:#8B949E;"> &middot; </span>'
+                f'<span style="color:#E6EDF3;">{summary.qualified_today} qualified</span>'
+                f'<span style="color:#8B949E;"> &middot; ${today_cost:.4f} AI spend</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        except Exception:
+            pass
+
         st.markdown(
             '<p style="font-family:Inter,sans-serif;font-size:0.85rem;color:#8B949E;margin-bottom:1rem;">Try asking:</p>',
             unsafe_allow_html=True,
@@ -73,6 +148,8 @@ def render(provider) -> None:
         for chip_col, suggestion in zip(chips, _SUGGESTIONS):
             with chip_col:
                 if st.button(suggestion, key=f"chip_{suggestion[:20]}", use_container_width=True):
+                    # Add message to history immediately for instant feedback
+                    st.session_state.chat_messages.append({"role": "user", "content": suggestion})
                     st.session_state["pending_question"] = suggestion
                     st.rerun()
 
@@ -94,12 +171,17 @@ def render(provider) -> None:
             st.warning("Enter your Anthropic API key in the sidebar to use the concierge.")
             return
 
-        # Display user message
-        with st.chat_message("user"):
-            st.write(prompt)
+        # Check if message was already added to history (by chip click pre-append)
+        already_in_history = messages and messages[-1]["role"] == "user" and messages[-1]["content"] == prompt
 
-        # Add to history
-        messages.append({"role": "user", "content": prompt})
+        # Display user message
+        if not already_in_history:
+            with st.chat_message("user"):
+                st.write(prompt)
+            messages.append({"role": "user", "content": prompt})
+        else:
+            with st.chat_message("user"):
+                st.write(prompt)
 
         # Get response
         with st.chat_message("assistant"):
@@ -121,24 +203,24 @@ def render(provider) -> None:
 
             with st.spinner("Thinking..."):
                 try:
-                    concierge = _get_concierge(provider, api_key)
+                    concierge = _get_concierge(provider, api_key, _get_model())
                     # Pass history excluding the current user message
                     history = messages[:-1]
                     response = concierge.chat(prompt, history=history, on_tool_call=_on_tool_call)
                 except anthropic.AuthenticationError:
-                    response = "Invalid API key. Please check your Anthropic API key in the sidebar."
+                    response = _fallback_response(prompt, provider)
                 except anthropic.PermissionDeniedError:
-                    response = "API key doesn't have permission to use this model. Please check your Anthropic account."
+                    response = _fallback_response(prompt, provider)
                 except anthropic.RateLimitError:
-                    response = "Too many requests. Please wait a moment and try again."
+                    response = _fallback_response(prompt, provider)
                 except anthropic.BadRequestError as exc:
                     msg = str(exc).lower()
                     if "credit balance" in msg or "billing" in msg:
-                        response = "AI service is temporarily unavailable — credits need to be topped up. Please contact support."
+                        response = _fallback_response(prompt, provider)
                     else:
                         response = "Request failed. Please try rephrasing your question."
                 except Exception:
-                    response = "Something went wrong. Please try again in a moment."
+                    response = _fallback_response(prompt, provider)
             tool_indicator.empty()
             st.write(response)
 
