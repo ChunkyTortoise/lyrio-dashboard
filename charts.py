@@ -7,6 +7,7 @@ import pandas as pd
 def style_chart(fig: go.Figure) -> go.Figure:
     """Apply Lyrio theme to any Plotly figure."""
     fig.update_layout(
+        template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color="#8B949E"),

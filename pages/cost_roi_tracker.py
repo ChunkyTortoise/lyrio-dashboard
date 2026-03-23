@@ -7,11 +7,26 @@ from components import render_page_title, render_stat
 from charts import bar_chart
 
 
+@st.cache_data(ttl=300)
+def _get_trends(_provider, days: int):
+    return _provider.get_daily_trends(days)
+
+
+@st.cache_data(ttl=300)
+def _get_cost_breakdown(_provider):
+    return _provider.get_cost_breakdown()
+
+
+@st.cache_data(ttl=300)
+def _get_conversations(_provider, limit: int):
+    return _provider.get_recent_conversations(limit)
+
+
 def render(provider) -> None:
     render_page_title("Cost & ROI tracker", "AI spend vs. business results")
 
     # Fetch trend data (last 28 days) and derive available months
-    trends = provider.get_daily_trends(28)
+    trends = _get_trends(provider, 28)
     available_months = sorted(
         {t.date.strftime("%Y-%m") for t in trends},
         reverse=True,
@@ -36,7 +51,7 @@ def render(provider) -> None:
     cost_per_conv = month_cost / max(month_conversations, 1)
 
     # ROI: use overall ROI multiplier scaled by month cost
-    cb = provider.get_cost_breakdown()
+    cb = _get_cost_breakdown(provider)
     roi = cb.roi
     roi_multiplier = roi.total_commission_earned / max(month_cost, 0.01)
 
@@ -110,7 +125,7 @@ def render(provider) -> None:
         '<h3 style="font-family:\'Space Grotesk\',sans-serif;font-size:1rem;color:#FFFFFF;">Top contacts by cost</h3>',
         unsafe_allow_html=True,
     )
-    convs = provider.get_recent_conversations(50)
+    convs = _get_conversations(provider, 50)
     cost_per_conv = roi.cost_per_conversation
     if convs:
         # group by lead, sum message counts as proxy for cost

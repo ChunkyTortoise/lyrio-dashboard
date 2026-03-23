@@ -9,12 +9,36 @@ from components import (
 from charts import area_chart
 
 
+@st.cache_data(ttl=300)
+def _get_bot_statuses(_provider):
+    return _provider.get_bot_statuses()
+
+
+@st.cache_data(ttl=300)
+def _get_all_leads(_provider):
+    return _provider.get_all_leads()
+
+
+@st.cache_data(ttl=300)
+def _get_trends(_provider, days: int):
+    return _provider.get_daily_trends(days)
+
+
+@st.cache_data(ttl=300)
+def _get_handoffs(_provider, limit: int):
+    return _provider.get_handoff_events(limit)
+
+
+@st.cache_data(ttl=300)
+def _get_conversations(_provider, limit: int):
+    return _provider.get_recent_conversations(limit)
+
+
 def render(provider) -> None:
     render_page_title("Bot command center", "Your 3 bots \u2014 live activity overview")
 
     # 3-column bot status cards
-    with st.spinner("Loading bot statuses..."):
-        statuses = provider.get_bot_statuses()
+    statuses = _get_bot_statuses(provider)
     cols = st.columns(3)
     for col, status in zip(cols, statuses):
         with col:
@@ -27,7 +51,7 @@ def render(provider) -> None:
 
     with tab_overview:
         # Hot leads requiring action
-        hot_leads = [l for l in provider.get_all_leads() if l.temperature == "hot"]
+        hot_leads = [l for l in _get_all_leads(provider) if l.temperature == "hot"]
         if hot_leads:
             st.markdown(
                 '<h3 style="font-family:\'Space Grotesk\',sans-serif;font-size:0.95rem;color:#ef4444;margin-bottom:0.5rem;">Hot leads requiring action</h3>',
@@ -48,7 +72,7 @@ def render(provider) -> None:
         total_convs = sum(s.conversations_total for s in statuses)
         avg_response = sum(s.avg_response_time_sec for s in statuses) / len(statuses)
 
-        handoffs = provider.get_handoff_events(50)
+        handoffs = _get_handoffs(provider, 50)
         success_rate = (sum(1 for h in handoffs if h.success) / len(handoffs) * 100) if handoffs else 0
         active = sum(s.active_conversations for s in statuses)
 
@@ -77,7 +101,7 @@ def render(provider) -> None:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # Build dataframe for area chart — proportions from actual bot data
-        trends = provider.get_daily_trends(14)
+        trends = _get_trends(provider, 14)
         total_all = sum(s.conversations_total for s in statuses) or 1
         bot_pcts = {s.bot_id: s.conversations_total / total_all for s in statuses}
         df = pd.DataFrame([
@@ -180,7 +204,7 @@ def render(provider) -> None:
                     st.dataframe(df_stall, use_container_width=True, hide_index=True)
 
     with tab_convs:
-        snippets = provider.get_recent_conversations(20)
+        snippets = _get_conversations(provider, 20)
         if snippets:
             for snippet in snippets:
                 render_conversation_item(snippet)
@@ -188,7 +212,7 @@ def render(provider) -> None:
             st.info("No recent conversations")
 
     with tab_handoffs:
-        handoffs = provider.get_handoff_events(20)
+        handoffs = _get_handoffs(provider, 20)
         if handoffs:
             df_h = pd.DataFrame([
                 {
