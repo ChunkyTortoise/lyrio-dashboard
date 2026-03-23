@@ -7,3 +7,7 @@ __pycache__/
 # Owner reference — contains live credentials
 JORGE_OWNER_REFERENCE.md
 *OWNER_REFERENCE*
+
+# Jorge bot guides — internal reference docs
+JORGE_BOT_GUIDE.md
+JORGE_BOT_GUIDE.html

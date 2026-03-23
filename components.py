@@ -107,6 +107,8 @@ def render_activity_item(event) -> None:
 
     badges = " ".join(filter(None, [bot_badge, temp_pill]))
 
+    # WARNING: ensure content is sanitized before rendering - potential XSS
+    # event.description originates from the GHL API (external data) in Live mode
     st.markdown(
         f"""<div style="border-left:4px solid {border};padding:0.5rem 0.75rem;margin-bottom:0.5rem;
             background:rgba(13,17,23,0.5);border-radius:0 6px 6px 0;">

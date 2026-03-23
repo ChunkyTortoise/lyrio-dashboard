@@ -17,10 +17,12 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest ruff
+        run: pip install -r requirements.txt pytest pytest-cov ruff mypy
       - name: Dependency check
         run: python -m pip check
       - name: Ruff
         run: ruff check .
+      - name: Type check
+        run: mypy . --ignore-missing-imports || true
       - name: Tests
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
