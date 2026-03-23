@@ -55,8 +55,13 @@ _ghl_key, _location_id = _live_creds()
 _has_live_creds = bool(_ghl_key and _location_id)
 
 # Session state defaults — auto-select Live when GHL credentials are configured
+# Deep-link: read ?page= from URL to restore nav state on share/reload
+_VALID_PAGES = ["Chat", "Bots", "Costs", "Activity", "Leads", "Tone"]
+_qp_page = st.query_params.get("page", "Chat")
+_initial_page = _qp_page if _qp_page in _VALID_PAGES else "Chat"
+
 _DEFAULTS: dict = {
-    "page": "Chat",
+    "nav_page": _initial_page,
     "chat_messages": [],
     "cost_month": "2026-02",
     "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
@@ -75,11 +80,15 @@ with st.sidebar:
     render_sidebar_brand()
     st.markdown("<br>", unsafe_allow_html=True)
 
+    def _sync_nav_to_url() -> None:
+        st.query_params["page"] = st.session_state["nav_page"]
+
     page = st.radio(
         "Navigate",
         options=["Chat", "Bots", "Costs", "Activity", "Leads", "Tone"],
         key="nav_page",
         label_visibility="collapsed",
+        on_change=_sync_nav_to_url,
     )
 
     st.markdown("---")
