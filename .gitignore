@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .streamlit/secrets.toml
 .DS_Store
+.env
+.env.local
+.env*.local
 
 # Owner reference — contains live credentials
 JORGE_OWNER_REFERENCE.md
