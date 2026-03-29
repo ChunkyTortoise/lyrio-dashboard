@@ -13,18 +13,18 @@ def inject_css() -> None:
         [data-testid="stSidebarNav"] { display: none !important; }
 
         :root {
-            --bg: #05070A;
-            --card-bg: rgba(13, 17, 23, 0.85);
+            --bg: #030712;
+            --card-bg: rgba(17, 24, 39, 0.85);
             --border: rgba(255, 255, 255, 0.06);
-            --accent: #6366F1;
-            --text-primary: #FFFFFF;
-            --text-body: #E6EDF3;
+            --accent: #818CF8;
+            --text-primary: #F9FAFB;
+            --text-body: #F9FAFB;
             --text-secondary: #8B949E;
             --hot: #ef4444;
             --warm: #f59e0b;
             --cold: #3b82f6;
             --success: #10b981;
-            --bot-seller: #6366F1;
+            --bot-seller: #818CF8;
             --bot-buyer: #10b981;
             --bot-lead: #F59E0B;
             --handoff: #8B5CF6;
@@ -39,10 +39,17 @@ def inject_css() -> None:
 
         .stApp {
             background-color: var(--bg) !important;
+            background-image: repeating-linear-gradient(
+                -45deg,
+                rgba(129, 140, 248, 0.015) 0px,
+                rgba(129, 140, 248, 0.015) 1px,
+                transparent 1px,
+                transparent 12px
+            );
         }
 
         .stAppViewContainer, .main {
-            background-color: var(--bg) !important;
+            background-color: transparent !important;
         }
 
         .main .block-container {
@@ -70,7 +77,7 @@ def inject_css() -> None:
 
         /* Sidebar */
         [data-testid="stSidebar"] {
-            background-color: #0A0C10 !important;
+            background-color: #0D1117 !important;
             border-right: 1px solid var(--border);
         }
         [data-testid="stSidebar"] .block-container {
@@ -90,7 +97,7 @@ def inject_css() -> None:
             cursor: pointer;
         }
         [data-testid="stSidebar"] .stRadio label:has(input:checked) {
-            background: rgba(99, 102, 241, 0.15);
+            background: rgba(129, 140, 248, 0.15);
             color: var(--accent) !important;
         }
 
@@ -111,7 +118,7 @@ def inject_css() -> None:
 
         /* Chat messages */
         [data-testid="stChatMessage"] {
-            background-color: rgba(13, 17, 23, 0.6) !important;
+            background-color: rgba(17, 24, 39, 0.6) !important;
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 0.5rem;
@@ -145,7 +152,7 @@ def inject_css() -> None:
         /* Selectbox / inputs */
         .stSelectbox > div > div,
         .stMultiSelect > div > div {
-            background-color: rgba(13, 17, 23, 0.85) !important;
+            background-color: rgba(17, 24, 39, 0.85) !important;
             border-color: var(--border) !important;
             color: var(--text-body) !important;
         }
