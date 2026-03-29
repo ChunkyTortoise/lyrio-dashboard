@@ -1,3 +1,5 @@
+![Lyrio Dashboard](docs/screenshots/banner.png)
+
 # Lyrio Dashboard
 
 A multi-page Streamlit analytics platform combining Plotly dashboards with Claude AI to track real estate leads, bot performance, campaign costs, and ROI across a live GoHighLevel pipeline.
