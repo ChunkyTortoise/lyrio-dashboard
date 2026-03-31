@@ -11,6 +11,7 @@ __pycache__/
 JORGE_OWNER_REFERENCE.md
 *OWNER_REFERENCE*
 
-# Jorge bot guides — internal reference docs
+# Internal reference docs — not for public repo
 JORGE_BOT_GUIDE.md
 JORGE_BOT_GUIDE.html
+DEVELOPMENT_SPEC.md

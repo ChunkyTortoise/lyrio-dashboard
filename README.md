@@ -8,12 +8,6 @@ A multi-page Streamlit analytics platform combining Plotly dashboards with Claud
 [![Tests](https://github.com/ChunkyTortoise/lyrio-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/ChunkyTortoise/lyrio-dashboard/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Screenshots
-
-| Concierge Chat | Cost & ROI |
-|----------------|------------|
-| ![Concierge Chat](docs/screenshots/concierge_chat.png) | ![Cost & ROI](docs/screenshots/cost_roi.png) |
-
 *Run `streamlit run app.py` to see the live UI with demo data (no API keys required).*
 
 ## Features
