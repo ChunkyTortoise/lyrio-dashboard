@@ -67,7 +67,7 @@ _DEFAULTS: dict = {
     "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
     "activity_items_shown": 20,
     "api_key": "",
-    "data_mode": "Live" if _has_live_creds else "Demo",
+    "data_mode": "Demo",  # Jorge API permanently offline; demo mode only
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
