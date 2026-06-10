@@ -12,12 +12,12 @@ A multi-page Streamlit analytics platform combining Plotly dashboards with Claud
 
 ## Features
 
-- **AI Concierge** — Claude tool_use chat answering questions about leads, costs, and follow-up strategy using 5 structured tools
-- **Lead Browser** — searchable, filterable table of all tracked leads with temperature scoring (FRS), stage, and conversation transcripts
-- **Cost & ROI Tracker** — month-by-month Plotly bar charts of AI token spend, commission ROI, and cost per qualified lead
-- **Bot Command Center** — real-time status cards for Seller, Buyer, and Lead bots showing response times, success rates, and lead temperature distribution
-- **Lead Activity Feed** — filterable event timeline (handoffs, temperature changes, messages) with bot badges and live auto-refresh
-- **Demo / Live toggle** — deterministic demo data (seed 20260221) or live GoHighLevel API data via a sidebar switch
+- **AI Concierge**: Claude tool_use chat answering questions about leads, costs, and follow-up strategy using 5 structured tools
+- **Lead Browser**: searchable, filterable table of all tracked leads with temperature scoring (FRS), stage, and conversation transcripts
+- **Cost & ROI Tracker**: month-by-month Plotly bar charts of AI token spend, commission ROI, and cost per qualified lead
+- **Bot Command Center**: real-time status cards for Seller, Buyer, and Lead bots showing response times, success rates, and lead temperature distribution
+- **Lead Activity Feed**: filterable event timeline (handoffs, temperature changes, messages) with bot badges and live auto-refresh
+- **Demo / Live toggle**: deterministic demo data (seed 20260221) or live GoHighLevel API data via a sidebar switch
 
 ## Tech Stack
 
@@ -41,9 +41,9 @@ lyrio-dashboard/
 ├── backend/
 │   ├── models.py             Frozen dataclasses (all data shapes)
 │   ├── data_provider.py      Protocol + factory
-│   ├── demo_data.py          DemoDataProvider — seeded random, deterministic
-│   ├── live_data.py          LiveDataProvider — reads from GoHighLevel API
-│   ├── ghl_client.py         GHLClient — contacts + conversations HTTP client
+│   ├── demo_data.py          DemoDataProvider, seeded random, deterministic
+│   ├── live_data.py          LiveDataProvider, reads from GoHighLevel API
+│   ├── ghl_client.py         GHLClient, contacts + conversations HTTP client
 │   ├── concierge.py          Claude tool_use chat module
 │   └── seed_constants.py     Curated lead names, addresses, messages
 └── pages/
