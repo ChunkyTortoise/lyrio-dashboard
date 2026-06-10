@@ -13,21 +13,21 @@ def inject_css() -> None:
         [data-testid="stSidebarNav"] { display: none !important; }
 
         :root {
-            --bg: #030712;
+            --bg: #14110D;
             --card-bg: rgba(17, 24, 39, 0.85);
             --border: rgba(255, 255, 255, 0.06);
-            --accent: #818CF8;
-            --text-primary: #F9FAFB;
-            --text-body: #F9FAFB;
+            --accent: #CC785C;
+            --text-primary: #F5F1EA;
+            --text-body: #F5F1EA;
             --text-secondary: #8B949E;
             --hot: #ef4444;
             --warm: #f59e0b;
             --cold: #3b82f6;
             --success: #10b981;
-            --bot-seller: #818CF8;
+            --bot-seller: #CC785C;
             --bot-buyer: #10b981;
             --bot-lead: #F59E0B;
-            --handoff: #8B5CF6;
+            --handoff: #B8723F;
             --workflow: #EC4899;
         }
 
@@ -77,7 +77,7 @@ def inject_css() -> None:
 
         /* Sidebar */
         [data-testid="stSidebar"] {
-            background-color: #0D1117 !important;
+            background-color: #1C1813 !important;
             border-right: 1px solid var(--border);
         }
         [data-testid="stSidebar"] .block-container {
@@ -112,7 +112,7 @@ def inject_css() -> None:
             font-size: 0.85rem;
         }
         .stButton > button:hover {
-            background-color: #4f46e5;
+            background-color: #CC785C;
             border: none;
         }
 
