@@ -4,9 +4,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 
-def _make_secrets(api_url: str = "https://jorge-api.example.com", admin_api_key: str = "test-key-abc") -> dict:
-    """Build a minimal secrets dict matching the jorge_bot section."""
-    return {"jorge_bot": {"api_url": api_url, "admin_api_key": admin_api_key}}
+def _make_secrets(api_url: str = "https://platform-api.example.com", admin_api_key: str = "test-key-abc") -> dict:
+    """Build a minimal secrets dict matching the platform_bot section."""
+    return {"platform_bot": {"api_url": api_url, "admin_api_key": admin_api_key}}
 
 
 def _load_module(secrets: dict):
@@ -50,7 +50,7 @@ def test_api_url_from_secrets():
 
 def test_fetch_settings_sends_auth_header():
     """_fetch_settings() must include X-Admin-Key in the GET request."""
-    secrets = _make_secrets(api_url="https://jorge-api.test", admin_api_key="key-xyz")
+    secrets = _make_secrets(api_url="https://platform-api.test", admin_api_key="key-xyz")
     module, mock_st = _load_module(secrets)
     mock_st.secrets = secrets
 
@@ -74,7 +74,7 @@ def test_fetch_settings_http_error_no_url_exposed():
     """On HTTP error, st.warning must not contain the raw API URL."""
     import requests as real_requests
 
-    secrets = _make_secrets(api_url="https://jorge-realty-ai-xxdf.onrender.com", admin_api_key="key")
+    secrets = _make_secrets(api_url="https://platform-api-xxdf.onrender.com", admin_api_key="key")
     module, mock_st = _load_module(secrets)
     mock_st.secrets = secrets
     mock_st.session_state.get.return_value = None  # no cache
@@ -91,13 +91,13 @@ def test_fetch_settings_http_error_no_url_exposed():
     assert result is None
     # Warning must not expose the raw API URL
     for msg in warning_calls:
-        assert "jorge-realty-ai-xxdf" not in str(msg)
+        assert "platform-api-xxdf" not in str(msg)
         assert "/admin/settings" not in str(msg)
 
 
 def test_reset_state_uses_new_admin_endpoint():
     """_reset_state() must call DELETE /admin/reset-state/{bot}/{contact_id}."""
-    secrets = _make_secrets(api_url="https://jorge-api.test", admin_api_key="key-xyz")
+    secrets = _make_secrets(api_url="https://platform-api.test", admin_api_key="key-xyz")
     module, mock_st = _load_module(secrets)
     mock_st.secrets = secrets
 
@@ -115,5 +115,5 @@ def test_reset_state_uses_new_admin_endpoint():
         result = module._reset_state("buyer", "contact-abc")
 
     assert result is True
-    assert captured["url"] == "https://jorge-api.test/admin/reset-state/buyer/contact-abc"
+    assert captured["url"] == "https://platform-api.test/admin/reset-state/buyer/contact-abc"
     assert captured["headers"].get("X-Admin-Key") == "key-xyz"

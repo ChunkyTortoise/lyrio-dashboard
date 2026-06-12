@@ -1,4 +1,4 @@
-"""JorgeApiDataProvider — replaces fabricated metrics with real Jorge API data."""
+"""PlatformApiDataProvider — replaces fabricated metrics with real platform API data."""
 from __future__ import annotations
 
 import requests
@@ -17,35 +17,35 @@ from backend.models import (
 )
 
 
-class JorgeApiDataProvider(LiveDataProvider):
-    """DataProvider that pulls real metrics from Jorge's dashboard API.
+class PlatformApiDataProvider(LiveDataProvider):
+    """DataProvider that pulls real metrics from platform dashboard API.
 
     Extends LiveDataProvider (GHL-based) and overrides methods that
-    return fabricated/heuristic data with real data from Jorge API.
-    Falls back to parent implementation if Jorge API is unavailable.
+    return fabricated/heuristic data with real data from platform API.
+    Falls back to parent implementation if platform API is unavailable.
     """
 
     def __init__(
         self,
         client: GHLClient,
-        jorge_api_url: str,
-        jorge_api_key: str,
+        platform_api_url: str,
+        platform_api_key: str,
     ) -> None:
-        super().__init__(client, jorge_api_url=jorge_api_url, jorge_api_key=jorge_api_key)
-        self._api_base = jorge_api_url.rstrip("/")
-        self._headers = {"X-Admin-Key": jorge_api_key} if jorge_api_key else {}
-        self._jorge_metrics_cache: dict | None = None
-        self._jorge_metrics_ts: datetime | None = None
+        super().__init__(client, platform_api_url=platform_api_url, platform_api_key=platform_api_key)
+        self._api_base = platform_api_url.rstrip("/")
+        self._headers = {"X-Admin-Key": platform_api_key} if platform_api_key else {}
+        self._platform_metrics_cache: dict | None = None
+        self._platform_metrics_ts: datetime | None = None
 
-    def _fetch_jorge_metrics(self) -> dict | None:
+    def _fetch_platform_metrics(self) -> dict | None:
         """GET /api/dashboard/metrics -- cached 30s. Returns None on failure."""
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         if (
-            self._jorge_metrics_cache is not None
-            and self._jorge_metrics_ts is not None
-            and (now - self._jorge_metrics_ts).total_seconds() < 30
+            self._platform_metrics_cache is not None
+            and self._platform_metrics_ts is not None
+            and (now - self._platform_metrics_ts).total_seconds() < 30
         ):
-            return self._jorge_metrics_cache
+            return self._platform_metrics_cache
         if not self._api_base:
             return None
         try:
@@ -55,16 +55,16 @@ class JorgeApiDataProvider(LiveDataProvider):
                 timeout=5,
             )
             r.raise_for_status()
-            self._jorge_metrics_cache = r.json()
-            self._jorge_metrics_ts = now
-            return self._jorge_metrics_cache
+            self._platform_metrics_cache = r.json()
+            self._platform_metrics_ts = now
+            return self._platform_metrics_cache
         except Exception:
             return None
 
     def get_bot_statuses(self) -> list[BotStatus]:
         """Override: replace hardcoded avg_response_time + success_rate with real data."""
         statuses = super().get_bot_statuses()
-        metrics = self._fetch_jorge_metrics()
+        metrics = self._fetch_platform_metrics()
         if not metrics:
             return statuses
         # get_system_summary() returns {"bots": {...}, "handoffs": {...}, "overall": {...}}
@@ -92,7 +92,7 @@ class JorgeApiDataProvider(LiveDataProvider):
         return result
 
     def get_platform_health(self) -> PlatformHealth:
-        """Override: use real error_rate_24h from Jorge /health/aggregate."""
+        """Override: use real error_rate_24h from platform /health/aggregate."""
         if not self._api_base:
             return super().get_platform_health()
         try:
@@ -106,7 +106,7 @@ class JorgeApiDataProvider(LiveDataProvider):
             checks = data.get("checks", {})
             all_ok = all(v in (True, "ok", "healthy") for v in checks.values())
             status = "healthy" if all_ok else "degraded"
-            metrics = self._fetch_jorge_metrics()
+            metrics = self._fetch_platform_metrics()
             error_rate = 0.0
             if metrics:
                 perf = metrics.get("performance", {})
@@ -120,7 +120,7 @@ class JorgeApiDataProvider(LiveDataProvider):
             return super().get_platform_health()
 
     def get_handoff_events(self, limit: int = 10) -> list[HandoffEvent]:
-        """Override: use real handoff records from Jorge BotMetricsCollector."""
+        """Override: use real handoff records from platform BotMetricsCollector."""
         if not self._api_base:
             return super().get_handoff_events(limit)
         try:
@@ -194,7 +194,7 @@ class JorgeApiDataProvider(LiveDataProvider):
 
     def get_performance_metrics(self) -> dict:
         """GET /api/dashboard/metrics -> performance data."""
-        metrics = self._fetch_jorge_metrics()
+        metrics = self._fetch_platform_metrics()
         if not metrics:
             return {}
         return metrics.get("performance", {})
@@ -231,7 +231,7 @@ class JorgeApiDataProvider(LiveDataProvider):
             return {"delivered": 0, "failed": 0, "read": 0, "delivery_rate": 0.0}
 
     def get_cost_breakdown(self) -> CostBreakdown:
-        """Override: pull real cost/ROI data from Jorge /api/dashboard/costs."""
+        """Override: pull real cost/ROI data from platform /api/dashboard/costs."""
         if not self._api_base:
             return super().get_cost_breakdown()
         try:
@@ -282,7 +282,7 @@ class JorgeApiDataProvider(LiveDataProvider):
             return super().get_cost_breakdown()
 
     def get_recent_activity(self, limit: int = 20) -> list[ActivityEvent]:
-        """Override: pull real events from Jorge /api/events/recent."""
+        """Override: pull real events from platform /api/events/recent."""
         if not self._api_base:
             return super().get_recent_activity(limit)
         try:
@@ -296,7 +296,7 @@ class JorgeApiDataProvider(LiveDataProvider):
             data = r.json()
             raw_events = data.get("events", [])
 
-            # Map Jorge event_type → Lyrio event_type
+            # Map platform event_type → Lyrio event_type
             _TYPE_MAP = {
                 "lead.new": "message_received",
                 "lead.qualified": "temperature_change",
@@ -322,8 +322,8 @@ class JorgeApiDataProvider(LiveDataProvider):
                 else:
                     ts = datetime.now(timezone.utc).replace(tzinfo=None)
 
-                jorge_type = e.get("event_type", "")
-                lyrio_type = _TYPE_MAP.get(jorge_type, jorge_type)
+                platform_type = e.get("event_type", "")
+                lyrio_type = _TYPE_MAP.get(platform_type, platform_type)
                 payload = e.get("payload", {})
 
                 events.append(ActivityEvent(
@@ -331,7 +331,7 @@ class JorgeApiDataProvider(LiveDataProvider):
                     event_type=lyrio_type,
                     lead_name=payload.get("contact_name", payload.get("lead_name", "Unknown")),
                     bot_id=payload.get("bot_id", e.get("source")),
-                    description=payload.get("description", f"{lyrio_type}: {jorge_type}"),
+                    description=payload.get("description", f"{lyrio_type}: {platform_type}"),
                     timestamp=ts,
                     metadata=payload,
                 ))

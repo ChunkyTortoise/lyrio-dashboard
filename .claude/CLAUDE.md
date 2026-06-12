@@ -6,10 +6,10 @@ Python 3.11 | Streamlit | Anthropic Claude (tool_use) | Plotly | Pandas
 ## Architecture
 Real estate analytics dashboard with AI concierge (5 tools via Claude tool_use).
 Pages: Concierge Chat, Bot Command Center, Cost & ROI, Lead Activity Feed.
-Backend: DemoDataProvider (seeded random, seed 20260221) or JorgeApiDataProvider (live API).
+Backend: DemoDataProvider (seeded random, seed 20260221) or PlatformApiDataProvider (live API).
 
-## JorgeApiDataProvider Methods
-`backend/jorge_api_provider.py` -- connects to Jorge API at `JORGE_API_URL`:
+## PlatformApiDataProvider Methods
+`backend/platform_api_provider.py` -- connects to platform API at `PLATFORM_API_URL`:
 - `get_bot_statuses()` -- Bot health from `/api/dashboard/metrics`
 - `get_platform_health()` -- Platform health summary
 - `get_handoff_events(limit)` -- From `/api/dashboard/handoffs`
@@ -25,7 +25,7 @@ Backend: DemoDataProvider (seeded random, seed 20260221) or JorgeApiDataProvider
 - `acknowledge_alert(alert_id)` -- POST `/api/alerts/{id}/acknowledge`
 
 ## Deploy
-Live: lyrio-jorge.streamlit.app (Streamlit Cloud, account: chunkytortoise)
+Live: lyrio-analytics.streamlit.app (Streamlit Cloud, account: chunkytortoise)
 
 ## Test
 ```

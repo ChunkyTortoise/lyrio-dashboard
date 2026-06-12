@@ -1,4 +1,4 @@
-"""Concierge Chat page — AI assistant for Jorge's real estate business."""
+"""Concierge Chat page — AI assistant for the client's real estate business."""
 from __future__ import annotations
 
 import anthropic

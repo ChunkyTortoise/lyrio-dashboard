@@ -1,4 +1,4 @@
-"""Tests for JorgeApiDataProvider — verifies Jorge API integration, fallback,
+"""Tests for PlatformApiDataProvider — verifies platform API integration, fallback,
 and 30s metrics cache."""
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.jorge_api_provider import JorgeApiDataProvider
+from backend.platform_api_provider import PlatformApiDataProvider
 
 
 def _make_contact(
@@ -51,25 +51,25 @@ def _make_conv(
 def _make_provider(
     contacts: list[dict] | None = None,
     convs: list[dict] | None = None,
-) -> JorgeApiDataProvider:
+) -> PlatformApiDataProvider:
     client = MagicMock()
     client.get_contacts.return_value = contacts or [
         _make_contact(cid="c1", tags=["seller-qualified", "hot-seller"]),
     ]
     client.get_conversations.return_value = convs or [_make_conv(contact_id="c1")]
-    return JorgeApiDataProvider(
+    return PlatformApiDataProvider(
         client,
-        jorge_api_url="https://jorge-api.example.com",
-        jorge_api_key="test-key-123",
+        platform_api_url="https://platform-api.example.com",
+        platform_api_key="test-key-123",
     )
 
 
 # ---------------------------------------------------------------------------
-# get_bot_statuses — uses Jorge metrics
+# get_bot_statuses — uses platform metrics
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
-def test_bot_statuses_uses_jorge_avg_response_time(mock_get: MagicMock) -> None:
+@patch("backend.platform_api_provider.requests.get")
+def test_bot_statuses_uses_platform_avg_response_time(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = {
@@ -92,7 +92,7 @@ def test_bot_statuses_uses_jorge_avg_response_time(mock_get: MagicMock) -> None:
     assert seller.active_conversations == 5
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_bot_statuses_fallback_on_api_failure(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("API down")
 
@@ -106,10 +106,10 @@ def test_bot_statuses_fallback_on_api_failure(mock_get: MagicMock) -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_platform_health — uses Jorge /health/aggregate
+# get_platform_health — uses platform /health/aggregate
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_platform_health_healthy(mock_get: MagicMock) -> None:
     def side_effect(url: str, **kwargs):
         resp = MagicMock()
@@ -135,7 +135,7 @@ def test_platform_health_healthy(mock_get: MagicMock) -> None:
     assert health.active_bots == 3
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_platform_health_degraded(mock_get: MagicMock) -> None:
     def side_effect(url: str, **kwargs):
         resp = MagicMock()
@@ -158,7 +158,7 @@ def test_platform_health_degraded(mock_get: MagicMock) -> None:
     assert health.error_rate_24h == 0.15
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_platform_health_fallback_on_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("unreachable")
 
@@ -171,11 +171,11 @@ def test_platform_health_fallback_on_error(mock_get: MagicMock) -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_handoff_events — maps Jorge API response
+# get_handoff_events — maps platform API response
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
-def test_handoff_events_from_jorge_api(mock_get: MagicMock) -> None:
+@patch("backend.platform_api_provider.requests.get")
+def test_handoff_events_from_platform_api(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = {
@@ -213,7 +213,7 @@ def test_handoff_events_from_jorge_api(mock_get: MagicMock) -> None:
     assert events[1].success is False
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_handoff_events_fallback_on_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("API down")
 
@@ -233,7 +233,7 @@ def test_handoff_events_fallback_on_error(mock_get: MagicMock) -> None:
 # Cache behavior — 30s TTL
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_metrics_cache_reuses_within_30s(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -249,15 +249,15 @@ def test_metrics_cache_reuses_within_30s(mock_get: MagicMock) -> None:
     provider = _make_provider()
 
     # First call fetches from API
-    provider._fetch_jorge_metrics()
+    provider._fetch_platform_metrics()
     assert mock_get.call_count == 1
 
     # Second call within 30s should use cache
-    provider._fetch_jorge_metrics()
+    provider._fetch_platform_metrics()
     assert mock_get.call_count == 1  # No new request
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_metrics_cache_expires_after_30s(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -267,14 +267,14 @@ def test_metrics_cache_expires_after_30s(mock_get: MagicMock) -> None:
     provider = _make_provider()
 
     # First call
-    provider._fetch_jorge_metrics()
+    provider._fetch_platform_metrics()
     assert mock_get.call_count == 1
 
     # Simulate cache expiry by backdating timestamp
-    provider._jorge_metrics_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=31)
+    provider._platform_metrics_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=31)
 
     # Should re-fetch
-    provider._fetch_jorge_metrics()
+    provider._fetch_platform_metrics()
     assert mock_get.call_count == 2
 
 
@@ -291,7 +291,7 @@ def test_empty_api_key_no_headers() -> None:
     client = MagicMock()
     client.get_contacts.return_value = []
     client.get_conversations.return_value = []
-    provider = JorgeApiDataProvider(client, "https://example.com", "")
+    provider = PlatformApiDataProvider(client, "https://example.com", "")
     assert provider._headers == {}
 
 
@@ -299,7 +299,7 @@ def test_api_base_strips_trailing_slash() -> None:
     client = MagicMock()
     client.get_contacts.return_value = []
     client.get_conversations.return_value = []
-    provider = JorgeApiDataProvider(client, "https://example.com/", "key")
+    provider = PlatformApiDataProvider(client, "https://example.com/", "key")
     assert provider._api_base == "https://example.com"
 
 
@@ -307,7 +307,7 @@ def test_api_base_strips_trailing_slash() -> None:
 # get_handoff_events — plain list format (bug fix)
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_handoff_events_plain_list_format(mock_get: MagicMock) -> None:
     """API returning a plain list (not dict with 'handoffs' key)."""
     mock_resp = MagicMock()
@@ -337,7 +337,7 @@ def test_handoff_events_plain_list_format(mock_get: MagicMock) -> None:
 # New methods
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_q_stage_distribution(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -355,14 +355,14 @@ def test_get_q_stage_distribution(mock_get: MagicMock) -> None:
     assert "Q3" not in dist  # 0 values excluded
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_q_stage_distribution_api_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
     provider = _make_provider()
     assert provider.get_q_stage_distribution() == {}
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_conversation_transcript(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -378,7 +378,7 @@ def test_get_conversation_transcript(mock_get: MagicMock) -> None:
     assert result[0]["bot_type"] == "lead"
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_conversation_transcript_404(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 404
@@ -393,7 +393,7 @@ def test_get_conversation_transcript_empty_contact_id() -> None:
     assert provider.get_conversation_transcript("") == []
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_performance_metrics(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -409,14 +409,14 @@ def test_get_performance_metrics(mock_get: MagicMock) -> None:
     assert perf["error_rate_24h"] == 0.01
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_performance_metrics_no_data(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
     provider = _make_provider()
     assert provider.get_performance_metrics() == {}
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_active_alerts(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -432,7 +432,7 @@ def test_get_active_alerts(mock_get: MagicMock) -> None:
     assert alerts[0]["type"] == "error_rate"
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_active_alerts_api_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
     provider = _make_provider()
@@ -443,7 +443,7 @@ def test_get_active_alerts_no_api_base() -> None:
     client = MagicMock()
     client.get_contacts.return_value = []
     client.get_conversations.return_value = []
-    provider = JorgeApiDataProvider(client, "", "")
+    provider = PlatformApiDataProvider(client, "", "")
     assert provider.get_active_alerts() == []
 
 
@@ -451,7 +451,7 @@ def test_get_active_alerts_no_api_base() -> None:
 # get_sms_metrics
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_sms_metrics_success(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -472,7 +472,7 @@ def test_get_sms_metrics_success(mock_get: MagicMock) -> None:
     assert sms["delivery_rate"] == 0.979
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_sms_metrics_error_fallback(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
     provider = _make_provider()
@@ -485,7 +485,7 @@ def test_get_sms_metrics_no_api_base() -> None:
     client = MagicMock()
     client.get_contacts.return_value = []
     client.get_conversations.return_value = []
-    provider = JorgeApiDataProvider(client, "", "")
+    provider = PlatformApiDataProvider(client, "", "")
     sms = provider.get_sms_metrics()
 
     assert sms == {"delivered": 0, "failed": 0, "read": 0, "delivery_rate": 0.0}
@@ -495,7 +495,7 @@ def test_get_sms_metrics_no_api_base() -> None:
 # get_cost_breakdown
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_cost_breakdown_success(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -532,7 +532,7 @@ def test_get_cost_breakdown_success(mock_get: MagicMock) -> None:
     assert cb.roi.roi_multiplier == 18000.0 / 0.33
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_cost_breakdown_fallback_on_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
 
@@ -548,7 +548,7 @@ def test_get_cost_breakdown_fallback_on_error(mock_get: MagicMock) -> None:
 # get_recent_activity
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_recent_activity_success(mock_get: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -591,9 +591,9 @@ def test_get_recent_activity_success(mock_get: MagicMock) -> None:
     assert events[1].lead_name == "Carlos Ruiz"
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_recent_activity_event_type_mapping(mock_get: MagicMock) -> None:
-    """Verify _TYPE_MAP correctly maps Jorge event types to Lyrio types."""
+    """Verify _TYPE_MAP correctly maps platform event types to Lyrio types."""
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = {
@@ -619,7 +619,7 @@ def test_get_recent_activity_event_type_mapping(mock_get: MagicMock) -> None:
     assert events[5].event_type == "message_sent"           # message.outbound
 
 
-@patch("backend.jorge_api_provider.requests.get")
+@patch("backend.platform_api_provider.requests.get")
 def test_get_recent_activity_fallback_on_error(mock_get: MagicMock) -> None:
     mock_get.side_effect = ConnectionError("down")
 
@@ -634,7 +634,7 @@ def test_get_recent_activity_fallback_on_error(mock_get: MagicMock) -> None:
 # acknowledge_alert
 # ---------------------------------------------------------------------------
 
-@patch("backend.jorge_api_provider.requests.post")
+@patch("backend.platform_api_provider.requests.post")
 def test_acknowledge_alert_success(mock_post: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -649,7 +649,7 @@ def test_acknowledge_alert_success(mock_post: MagicMock) -> None:
     assert "/api/alerts/alert-123/acknowledge" in call_url
 
 
-@patch("backend.jorge_api_provider.requests.post")
+@patch("backend.platform_api_provider.requests.post")
 def test_acknowledge_alert_failure_non_200(mock_post: MagicMock) -> None:
     mock_resp = MagicMock()
     mock_resp.status_code = 404
@@ -665,9 +665,9 @@ def test_acknowledge_alert_no_api_base() -> None:
     client = MagicMock()
     client.get_contacts.return_value = []
     client.get_conversations.return_value = []
-    provider = JorgeApiDataProvider(client, "", "")
+    provider = PlatformApiDataProvider(client, "", "")
 
-    with patch("backend.jorge_api_provider.requests.post") as mock_post:
+    with patch("backend.platform_api_provider.requests.post") as mock_post:
         result = provider.acknowledge_alert("alert-123")
         assert result is False
         mock_post.assert_not_called()

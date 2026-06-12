@@ -54,7 +54,7 @@ lyrio-dashboard/
     └── lead_browser.py       Searchable lead table + detail panel
 ```
 
-**Data flow:** `app.py` calls `_get_provider()` (cached via `@st.cache_resource`). If GHL credentials are present in `secrets.toml`, it returns a `JorgeApiDataProvider` or `LiveDataProvider`; otherwise it falls back to `DemoDataProvider` with a fixed seed for consistent demo data across sessions.
+**Data flow:** `app.py` calls `_get_provider()` (cached via `@st.cache_resource`). If GHL credentials are present in `secrets.toml`, it returns a `PlatformApiDataProvider` or `LiveDataProvider`; otherwise it falls back to `DemoDataProvider` with a fixed seed for consistent demo data across sessions.
 
 ## Local Setup
 

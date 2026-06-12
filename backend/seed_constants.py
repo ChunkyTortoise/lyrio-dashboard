@@ -69,14 +69,14 @@ BUYER_SMS_MESSAGES = [
 ]
 
 LEAD_SMS_MESSAGES = [
-    "Hi {name}! I'm Jorge's AI assistant. We noticed you might be interested in real estate in Rancho Cucamonga. Are you thinking of buying or selling?",
+    "Hi {name}! I'm the platform AI assistant. We noticed you might be interested in real estate in Rancho Cucamonga. Are you thinking of buying or selling?",
     "Thanks for connecting! Are you more interested in buying a new home or selling your current property?",
     "The RC market is really active right now. What's driving your interest in real estate?",
     "Just want to make sure I connect you with the right resources. What's your timeframe?",
-    "I can have Jorge reach out directly. What's the best time to call you?",
+    "I can have our agent reach out directly. What's the best time to call you?",
     "Have you already spoken with a real estate agent, or are you just starting your search?",
     "Great! Based on what you've shared, it sounds like you might be a good fit for our buyer program.",
-    "I'm going to flag your profile for Jorge's team. They'll be in touch within 24 hours.",
+    "I'm going to flag your profile for our team. They'll be in touch within 24 hours.",
     "Just following up from yesterday — do you have any questions I can help answer?",
-    "Thanks for your patience! Jorge will be reaching out shortly to discuss your options.",
+    "Thanks for your patience! Our agent will be reaching out shortly to discuss your options.",
 ]

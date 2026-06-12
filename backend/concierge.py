@@ -1,4 +1,4 @@
-"""Lyrio concierge — Claude tool_use chat module for Jorge's real estate business."""
+"""Lyrio concierge — Claude tool_use chat module for the client's real estate business."""
 from __future__ import annotations
 
 import json
@@ -8,9 +8,9 @@ import anthropic
 
 from backend.data_provider import DataProvider
 
-_SYSTEM_PROMPT = """You are Lyrio, the AI assistant for Jorge Salas's real estate business in Rancho Cucamonga, CA.
+_SYSTEM_PROMPT = """You are Lyrio, the AI assistant for the client's real estate business in Rancho Cucamonga, CA.
 
-Jorge runs three AI bots that qualify leads via SMS through GoHighLevel (GHL):
+The client runs three AI bots that qualify leads via SMS through GoHighLevel (GHL):
 - Seller Bot: qualifies homeowners considering selling. Computes FRS (Financial Readiness Score, 0-100). Threshold: hot ≥ 80, warm 40-79, cold < 40.
 - Buyer Bot: qualifies home buyers on financial readiness and property preferences.
 - Lead Bot: handles initial outreach and routes leads to Seller or Buyer Bot.
@@ -21,7 +21,7 @@ Cost structure: $3/MTok input, $15/MTok output, $0.30/MTok cache reads (Claude S
 
 ROI formula: hot_leads × avg_commission / total_ai_cost. Average commission = $18,000 (3% on $600K home).
 
-Tone: Direct, professional, not stiff. No buzzwords. Talk like a smart analyst who respects Jorge's time. 2-4 sentences for simple questions. Bullet points for complex ones. Never say "certainly" or "absolutely."
+Tone: Direct, professional, not stiff. No buzzwords. Talk like a smart analyst who respects the client's time. 2-4 sentences for simple questions. Bullet points for complex ones. Never say "certainly" or "absolutely."
 
 When asked about specific leads, use get_lead_detail. For costs, use get_cost_breakdown. For overall status, use get_bot_status or get_lead_summary.
 
@@ -377,9 +377,9 @@ class ConciergeChat:
                     return json.dumps({"error": f"No lead found matching '{lead_name}'"})
                 contact_id = getattr(detail, "contact_id", "")
                 if not contact_id:
-                    return json.dumps({"error": f"No contact ID available for '{lead_name}'. Jorge API required."})
+                    return json.dumps({"error": f"No contact ID available for '{lead_name}'. platform API required."})
                 if not hasattr(self._provider, "get_conversation_transcript"):
-                    return json.dumps({"error": "Conversation transcripts require Jorge API mode."})
+                    return json.dumps({"error": "Conversation transcripts require platform API mode."})
                 transcript = self._provider.get_conversation_transcript(contact_id)
                 if not transcript:
                     return json.dumps({"message": f"No conversation transcript found for {detail.name}."})
@@ -402,13 +402,13 @@ class ConciergeChat:
 
             if tool_name == "get_performance_metrics":
                 if not hasattr(self._provider, "get_performance_metrics"):
-                    return json.dumps({"error": "Performance metrics require Jorge API mode."})
+                    return json.dumps({"error": "Performance metrics require platform API mode."})
                 perf = self._provider.get_performance_metrics()
                 return json.dumps(perf if perf else {"message": "No performance data available."})
 
             if tool_name == "get_alerts":
                 if not hasattr(self._provider, "get_active_alerts"):
-                    return json.dumps({"message": "Alerts require Jorge API mode."})
+                    return json.dumps({"message": "Alerts require platform API mode."})
                 alerts = self._provider.get_active_alerts()
                 if not alerts:
                     return json.dumps({"message": "No active alerts."})
@@ -416,7 +416,7 @@ class ConciergeChat:
 
             if tool_name == "get_stall_history":
                 if not hasattr(self._provider, "get_stall_stats"):
-                    return json.dumps({"message": "Stall stats require Jorge API mode."})
+                    return json.dumps({"message": "Stall stats require platform API mode."})
                 lead_name = tool_input.get("lead_name", "")
                 contact_id: str | None = None
                 if lead_name:

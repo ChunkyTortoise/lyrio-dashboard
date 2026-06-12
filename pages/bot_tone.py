@@ -1,4 +1,4 @@
-"""Bot Tone Settings page — edit Jorge's bot persona, phrases, and questions."""
+"""Bot Tone Settings page — edit the client's bot persona, phrases, and questions."""
 from __future__ import annotations
 
 import streamlit as st
@@ -7,11 +7,11 @@ from components import render_page_title
 
 
 def _api_url() -> str:
-    return st.secrets["jorge_bot"]["api_url"]
+    return st.secrets["platform_bot"]["api_url"]
 
 
 def _auth_headers() -> dict:
-    return {"X-Admin-Key": st.secrets["jorge_bot"]["admin_api_key"]}
+    return {"X-Admin-Key": st.secrets["platform_bot"]["admin_api_key"]}
 
 
 def _fetch_settings() -> dict | None:
@@ -19,7 +19,7 @@ def _fetch_settings() -> dict | None:
         api_url = _api_url()
         headers = _auth_headers()
     except Exception:
-        st.error("Bot API credentials are not configured — add `jorge_bot` to Streamlit secrets.")
+        st.error("Bot API credentials are not configured — add `platform_bot` to Streamlit secrets.")
         return None
 
     # Use cache key in session state for 5-min TTL
@@ -119,7 +119,7 @@ def _render_bot_section(bot: str, label: str, data: dict, q_labels: dict, q_hint
 
     with st.expander("Opener phrases", expanded=True):
         st.caption("One of these is randomly picked and prepended to each question. Put each phrase on its own line.")
-        phrases = data.get("jorge_phrases", [])
+        phrases = data.get("platform_phrases", [])
         phrases_text = st.text_area(
             "Phrases (one per line)",
             value="\n".join(phrases),
@@ -131,7 +131,7 @@ def _render_bot_section(bot: str, label: str, data: dict, q_labels: dict, q_hint
             updated = [p.strip() for p in phrases_text.splitlines() if p.strip()]
             if not updated:
                 st.warning("Need at least one phrase.")
-            elif _save_settings(bot, {"jorge_phrases": updated}):
+            elif _save_settings(bot, {"platform_phrases": updated}):
                 st.success("Saved.")
 
     with st.expander("Q1–Q4 questions", expanded=True):
@@ -255,7 +255,7 @@ def render(provider) -> None:
             "4": "Q4 — Offer acceptance",
         },
         q_hint=(
-            "The 4 qualification questions Jorge asks every seller. "
+            "The 4 qualification questions the platform asks every seller. "
             "`{offer_amount}` in Q4 is auto-calculated (75% of seller's stated price) — keep it."
         ),
     )

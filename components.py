@@ -185,7 +185,7 @@ def render_sidebar_brand() -> None:
         <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.8rem;
             color:#FFFFFF;letter-spacing:-0.03em;line-height:1.1;">Lyrio</div>
         <div style="font-family:Inter,sans-serif;font-size:0.85rem;color:#8B949E;margin-top:0.2rem;">
-            Jorge's AI platform</div>
+            AI platform</div>
         </div>""",
         unsafe_allow_html=True,
     )

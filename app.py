@@ -1,4 +1,4 @@
-"""Lyrio Dashboard — Jorge's AI Platform.
+"""Lyrio Dashboard — AI Platform.
 
 Run with: streamlit run app.py
 """
@@ -8,7 +8,7 @@ import streamlit as st
 
 # Page config must be the first Streamlit call
 st.set_page_config(
-    page_title="Lyrio — Jorge's AI Platform",
+    page_title="Lyrio — AI Platform",
     page_icon="◆",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -40,14 +40,14 @@ def _get_provider(mode: str) -> DataProvider:
         ghl_key, location_id = _live_creds()
         if ghl_key and location_id:
             from backend.ghl_client import GHLClient
-            jorge_api_url = st.secrets.get("jorge_bot", {}).get("api_url", "")
-            jorge_api_key = st.secrets.get("jorge_bot", {}).get("admin_api_key", "")
+            platform_api_url = st.secrets.get("platform_bot", {}).get("api_url", "")
+            platform_api_key = st.secrets.get("platform_bot", {}).get("admin_api_key", "")
             ghl_client = GHLClient(ghl_key, location_id)
-            if jorge_api_url and jorge_api_key:
-                from backend.jorge_api_provider import JorgeApiDataProvider
-                return JorgeApiDataProvider(ghl_client, jorge_api_url, jorge_api_key)
+            if platform_api_url and platform_api_key:
+                from backend.platform_api_provider import PlatformApiDataProvider
+                return PlatformApiDataProvider(ghl_client, platform_api_url, platform_api_key)
             from backend.live_data import LiveDataProvider
-            return LiveDataProvider(ghl_client, jorge_api_url=jorge_api_url, jorge_api_key=jorge_api_key)
+            return LiveDataProvider(ghl_client, platform_api_url=platform_api_url, platform_api_key=platform_api_key)
     return create_data_provider(mode="demo")
 
 
@@ -67,7 +67,7 @@ _DEFAULTS: dict = {
     "activity_filters": {"event_types": ["All"], "bot": "All", "temperature": "All"},
     "activity_items_shown": 20,
     "api_key": "",
-    "data_mode": "Demo",  # Jorge API permanently offline; demo mode only
+    "data_mode": "Demo",  # Platform API permanently offline; demo mode only
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:

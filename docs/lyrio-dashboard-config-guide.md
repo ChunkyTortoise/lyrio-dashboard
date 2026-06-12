@@ -1,8 +1,8 @@
-# Lyrio Dashboard — Configuration Guide for Jorge
+# Lyrio Dashboard — Configuration Guide
 
 ## How to Access Files
 
-All files live inside the `lyrio_dashboard/` folder on the developer's machine. For changes to take effect on the **live app** at `lyrio-jorge.streamlit.app`, the developer pushes updates to GitHub and Streamlit Cloud rebuilds automatically. You don't edit files directly on the live site.
+All files live inside the `lyrio_dashboard/` folder on the developer's machine. For changes to take effect on the **live app** at `lyrio-analytics.streamlit.app`, the developer pushes updates to GitHub and Streamlit Cloud rebuilds automatically. You don't edit files directly on the live site.
 
 ---
 
@@ -48,7 +48,7 @@ The **chat suggestion buttons** (the quick-tap prompts on the Chat page) are in 
 
 ---
 
-## 4. Demo Data (what Jorge sees in Demo mode)
+## 4. Demo Data (Demo mode)
 **File: `backend/demo_data.py`** and **`seed_constants.py`**
 
 | Setting | Value | What It Controls |
@@ -126,4 +126,4 @@ These are GHL-specific IDs that must match **your** GHL account exactly.
 
 ---
 
-**Bottom line for Jorge:** The only file you'd ever need to give someone new access to update is `.streamlit/secrets.toml` — that's where all credentials live. Everything else is app behavior that a developer would adjust.
+Bottom line: The only file you'd ever need to give someone new access to update is `.streamlit/secrets.toml` — that's where all credentials live. Everything else is app behavior that a developer would adjust.

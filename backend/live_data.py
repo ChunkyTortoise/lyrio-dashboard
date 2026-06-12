@@ -20,7 +20,7 @@ from backend.models import (
     ROIMetrics,
 )
 
-# Custom field IDs (from .env.jorge)
+# Custom field IDs (from .env.platform)
 _CF_BOT_TYPE = "YJ9EDgHQB3UoKnnTSoUO"
 _CF_LEAD_SCORE = "FpLprsZwqpYTyUxYzgpS"
 _CF_TIMELINE = "7GGX1W3EKa51AsPU1wbP"
@@ -163,12 +163,12 @@ class LiveDataProvider:
     def __init__(
         self,
         client: GHLClient,
-        jorge_api_url: str = "",
-        jorge_api_key: str = "",
+        platform_api_url: str = "",
+        platform_api_key: str = "",
     ) -> None:
         self._client = client
-        self._jorge_api_url = jorge_api_url
-        self._jorge_api_key = jorge_api_key
+        self._platform_api_url = platform_api_url
+        self._platform_api_key = platform_api_key
         # Instance-level cache so GHL is hit once per provider lifetime
         self._contacts: list[dict] | None = None
         self._conversations: list[dict] | None = None
@@ -200,15 +200,15 @@ class LiveDataProvider:
         ):
             return self._bot_health
 
-        if not self._jorge_api_url:
+        if not self._platform_api_url:
             result: dict[str, bool] = {"seller": True, "buyer": True, "lead": True}
             self._bot_health = result
             self._bot_health_ts = now
             return result
 
         try:
-            headers = {"X-Admin-Key": self._jorge_api_key} if self._jorge_api_key else {}
-            r = _requests.get(f"{self._jorge_api_url}/health", headers=headers, timeout=5)
+            headers = {"X-Admin-Key": self._platform_api_key} if self._platform_api_key else {}
+            r = _requests.get(f"{self._platform_api_url}/health", headers=headers, timeout=5)
             r.raise_for_status()
             result = {"seller": True, "buyer": True, "lead": True}
         except Exception:
